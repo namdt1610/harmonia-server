@@ -49,7 +49,6 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     'dj_rest_auth',
     'dj_rest_auth.registration',
-    'social_django',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
@@ -116,7 +115,7 @@ MIDDLEWARE = [
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-ROOT_URLCONF = 'social_media.urls'
+ROOT_URLCONF = 'spotify.urls'
 
 TEMPLATES = [
     {
@@ -134,7 +133,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'social_media.wsgi.application'
+WSGI_APPLICATION = 'spotify.wsgi.application'
 
 
 # Database
