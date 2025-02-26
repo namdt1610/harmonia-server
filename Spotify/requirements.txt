@@ -1,0 +1,11 @@
+Django
+djangorestframework
+psycopg2-binary
+python-dotenv  
+rest_framework_simplejwt
+allauth
+dj_rest_auth
+social-auth-app-django
+rest_framework_simplejwt
+djangorestframework-simplejwt
+django-cors-headers
