@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',  # Cần thiết để hỗ trợ session
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     'django.contrib.sites', 
 
     # Third-party apps
@@ -52,10 +51,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
+    'storages',
     
     # App của bạn
     'authentication',
     'user',  
+    'music',
 ]
 
 SITE_ID = 1  # Cần thiết cho django-allauth
@@ -113,7 +114,10 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
 
 ROOT_URLCONF = 'spotify.urls'
 
@@ -142,10 +146,10 @@ WSGI_APPLICATION = 'spotify.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'igclone',
-        'USER': 'nam',
+        'NAME': 'sptf',
+        'USER': 'postgres_sptf',
         'PASSWORD': 'namdt2003',
-        'HOST': 'localhost',
+        'HOST': 'sptf.c7k0ua0gi01e.ap-southeast-2.rds.amazonaws.com',
         'PORT': '5432',
     }
 }
@@ -190,3 +194,16 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+import os
+
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+AWS_S3_REGION_NAME = os.getenv("AWS_REGION")
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+
+# Dùng S3 làm nơi lưu trữ file mặc định
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
