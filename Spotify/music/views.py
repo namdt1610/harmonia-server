@@ -44,20 +44,42 @@ class UploadTrackViewSet(viewsets.ModelViewSet):
     def upload(self, request):
         try:
             file = request.FILES.get('file')
+            artist_id = request.data.get('artist')  # Lấy artist từ request
+            duration = request.data.get('duration')  # Lấy duration từ request
+
             if not file:
                 return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not artist_id:
+                return Response({'error': 'Artist is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Kiểm tra artist có tồn tại không
+            try:
+                artist = Artist.objects.get(id=int(artist_id))
+            except Artist.DoesNotExist:
+                return Response({'error': 'Artist not found'}, status=status.HTTP_400_BAD_REQUEST)
 
             file_path = default_storage.save(f"tracks/{file.name}", ContentFile(file.read()))
             file_url = default_storage.url(file_path)
 
-            music = Track.objects.create(file=file_url, title=file.name)
+            # Tạo track với artist_id
+            music = Track.objects.create(
+                file=file_url, 
+                title=file.name, 
+                artist=artist,
+                duration=int(duration) if duration else None
+            )
 
-            return Response({"message": "Upload successfully!", "file_url": file_url}, status=status.HTTP_201_CREATED)
+            return Response({
+                "message": "Upload successfully!",
+                "file_url": file_url,
+                "track_id": music.id
+            }, status=status.HTTP_201_CREATED)
+
         except Exception as e:
             import traceback
             traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
         
 class TrackFileSerializer(serializers.ModelSerializer):
     def validate(self, file):

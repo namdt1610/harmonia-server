@@ -28,7 +28,7 @@ class Track(models.Model):
     album = models.ForeignKey(Album, on_delete=models.SET_NULL,null=True, blank=True)
     artist = models.ForeignKey(Artist, on_delete=models.CASCADE, related_name='tracks')
     file = models.FileField(upload_to='tracks/',validators=[validate_audio_file], max_length=500)
-    duration = models.CharField(help_text="Duration in minutes", null=True, blank=True)
+    duration = models.PositiveIntegerField(help_text="Duration in minutes", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     def save(self, *args, **kwargs):
