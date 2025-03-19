@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.core.files.base import ContentFile
 from .models import Track
+from rest_framework.filters import SearchFilter
 from .serializers import TrackSerializer
 import os
 import logging
@@ -24,7 +25,10 @@ class AlbumViewSet(viewsets.ModelViewSet):
 class TrackViewSet(viewsets.ModelViewSet):
     queryset = Track.objects.all()
     serializer_class = TrackSerializer
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
+    filter_backends = [SearchFilter]
+    search_fields = ['title', 'artist__name']
 
 
 class PlaylistViewSet(viewsets.ModelViewSet):
