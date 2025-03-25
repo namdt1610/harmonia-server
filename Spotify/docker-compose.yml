@@ -3,6 +3,8 @@ version: '3.8'
 services:
     web:
         build: .
+        volumes:
+            - .:/app
         entrypoint: ["/app/entrypoint.sh"]
         ports:
             - '8000:8000'
