@@ -4,6 +4,7 @@ from .serializers import ArtistSerializer, AlbumSerializer, TrackSerializer, Pla
 from django.core.files.storage import default_storage
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from django.core.files.base import ContentFile
 from .models import Track
 from rest_framework.filters import SearchFilter
@@ -11,6 +12,11 @@ from .serializers import TrackSerializer
 import os
 import logging
 logger = logging.getLogger(__name__)
+
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "size"
+    max_page_size = 100
 
 class ArtistViewSet(viewsets.ModelViewSet):
     queryset = Artist.objects.all()
@@ -68,6 +74,7 @@ class UploadTrackViewSet(viewsets.ModelViewSet):
 
             # Tạo track với artist_id
             music = Track.objects.create(
+                
                 file=file_url, 
                 title=file.name, 
                 artist=artist,
@@ -76,8 +83,8 @@ class UploadTrackViewSet(viewsets.ModelViewSet):
 
             return Response({
                 "message": "Upload successfully!",
-                "file_url": file_url,
-                "track_id": music.id
+                "file": file_url,
+                "id": music.id
             }, status=status.HTTP_201_CREATED)
 
         except Exception as e:

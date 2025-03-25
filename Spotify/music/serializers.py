@@ -7,7 +7,7 @@ class ArtistSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class AlbumSerializer(serializers.ModelSerializer):
-    artist = ArtistSerializer()
+    artist = serializers.PrimaryKeyRelatedField(queryset=Artist.objects.all())
 
     class Meta:
         model = Album
@@ -16,20 +16,12 @@ class AlbumSerializer(serializers.ModelSerializer):
 class TrackSerializer(serializers.ModelSerializer):
     album = serializers.PrimaryKeyRelatedField(queryset=Album.objects.all(), required=False)
     artist = serializers.PrimaryKeyRelatedField(queryset=Artist.objects.all())
+    artist_name = serializers.CharField(source='artist.name', read_only=True)
+    album_title = serializers.CharField(source='album.title', read_only=True)
 
     class Meta:
         model = Track
         fields = '__all__'
-        print(Track._meta.get_field('duration').help_text)
-        
-    # def validate_artist(self, value):
-    #     print(f"Artist value received: {value}")
-    #     if value is None:
-    #         raise serializers.ValidationError("Artist cannot be null.")
-    #     try:
-    #         return int(value)
-    #     except ValueError:
-    #         raise serializers.ValidationError("Artist must be a valid number.")
     
     def validate_duration(self, value):
         print(f"Duration value received: {value}")
@@ -42,7 +34,7 @@ class TrackSerializer(serializers.ModelSerializer):
 
 class PlaylistSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField()
-    tracks = TrackSerializer(many=True)
+    tracks = serializers.PrimaryKeyRelatedField(many=True, queryset=Track.objects.all(), required=False)
 
     class Meta:
         model = Playlist

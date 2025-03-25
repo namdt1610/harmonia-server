@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -146,11 +147,11 @@ WSGI_APPLICATION = 'spotify.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'sptf',
-        'USER': 'postgres_sptf',
-        'PASSWORD': 'namdt2003',
-        'HOST': 'sptf.c7k0ua0gi01e.ap-southeast-2.rds.amazonaws.com',
-        'PORT': '5432',
+        'NAME': os.getenv('DB_NAME', 'sptf'),
+        'USER': os.getenv('DB_USER', 'postgres_sptf'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'namdt2003'),
+        'HOST': os.getenv('DB_HOST', 'sptf.c7k0ua0gi01e.ap-southeast-2.rds.amazonaws.com'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
@@ -195,8 +196,8 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-import os
 
+# Cấu hình cho AWS S3
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
@@ -207,3 +208,12 @@ AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 
 # Dùng S3 làm nơi lưu trữ file mặc định
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+import sys
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
