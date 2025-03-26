@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-+43+y-!@8$x=n0x*dcg^89jou0^_)u7jrb@1$uiuzix1fote2j'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG")
 
 ALLOWED_HOSTS = ["*"]
 
@@ -68,7 +69,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
-    )
+    ),
 }
 
 SIMPLE_JWT = {
@@ -139,21 +140,38 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'spotify.wsgi.application'
+ENVIRONMENT = os.getenv("DJANGO_ENV", "dev")
 
+if ENVIRONMENT == "production":
+    load_dotenv(".env.prod")
+else:
+    load_dotenv(".env.dev")
+    
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'sptf'),
-        'USER': os.getenv('DB_USER', 'postgres_sptf'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'namdt2003'),
-        'HOST': os.getenv('DB_HOST', 'sptf.c7k0ua0gi01e.ap-southeast-2.rds.amazonaws.com'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+        'NAME': os.getenv("DB_NAME"),
+        'USER': os.getenv("DB_USER"),
+        'PASSWORD': os.getenv("DB_PASSWORD"),
+        'HOST': os.getenv("DB_HOST"),
+        'PORT': os.getenv("DB_PORT"),
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('DB_NAME', 'sptf'),
+#         'USER': os.getenv('DB_USER', 'postgres_sptf'),
+#         'PASSWORD': os.getenv('DB_PASSWORD', 'namdt2003'),
+#         'HOST': os.getenv('DB_HOST', 'sptf.c7k0ua0gi01e.ap-southeast-2.rds.amazonaws.com'),
+#         'PORT': os.getenv('DB_PORT', '5432'),
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -190,6 +208,19 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Extra places for collectstatic to find static files
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
+# For production, you might want to use S3 for static files as well
+if ENVIRONMENT == "production":
+    STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+else:
+    # Use the default file system storage for development
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

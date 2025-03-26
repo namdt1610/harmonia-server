@@ -1,5 +1,5 @@
 # Base Python image
-FROM python:3.12.3-slim
+FROM python:3.12.3-alpine
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -10,8 +10,8 @@ WORKDIR /app
 
 # Install dependencies
 COPY requirements.txt .
-RUN apt update && apt install -y libglib2.0-dev pkg-config libdbus-1-dev
-RUN apt-get update && apt-get install -y gcc g++ make build-essential libdbus-1-dev pkg-config
+RUN apt update && apt install -y
+RUN apt-get update && apt-get install -y gcc g++ make build-essential libdbus-1-dev pkg-config libglib2.0-dev postgresql-client
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 

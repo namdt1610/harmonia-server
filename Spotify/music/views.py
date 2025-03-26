@@ -11,13 +11,34 @@ from rest_framework.filters import SearchFilter
 from .serializers import TrackSerializer
 import os
 import logging
+from django.db.models import Q
 logger = logging.getLogger(__name__)
 
 class CustomPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = "size"
     max_page_size = 100
+    
+class GlobalSearchViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.AllowAny]
 
+    @action(detail=False, methods=["get"])
+    def search(self, request):
+        query = request.query_params.get('q', '')
+
+        if not query:
+            return Response({"error": "Missing search query"}, status=400)
+
+        tracks = Track.objects.filter(Q(title__icontains=query))
+        artists = Artist.objects.filter(Q(name__icontains=query))
+        playlists = Playlist.objects.filter(Q(name__icontains=query))
+
+        return Response({
+            "tracks": TrackSerializer(tracks, many=True).data,
+            "artists": ArtistSerializer(artists, many=True).data,
+            "playlists": PlaylistSerializer(playlists, many=True).data
+        })
+        
 class ArtistViewSet(viewsets.ModelViewSet):
     queryset = Artist.objects.all()
     serializer_class = ArtistSerializer

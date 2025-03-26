@@ -1,31 +1,16 @@
 version: '3.8'
 
 services:
-    web:
-        build: .
-        volumes:
-            - .:/app
-        entrypoint: ["/app/entrypoint.sh"]
-        ports:
-            - '8000:8000'
-        env_file:
-            - .env
-        depends_on:
-            redis:
-                condition: service_healthy
-        healthcheck:
-            test: ['CMD-SHELL', 'sleep 5 && curl -f http://localhost:8000/health/ || exit 1']
-            interval: 30s
-            timeout: 10s
-            retries: 5
-
-    redis:
-        image: redis:7
-        restart: always
-        ports:
-            - '6379:6379'
-        healthcheck:
-            test: ['CMD', 'redis-cli', 'ping']
-            interval: 30s
-            timeout: 10s
-            retries: 5
+  web:
+    build: .
+    environment:
+      - DJANGO_ENV=production  # Chỉ định môi trường là production
+      - DB_HOST=your-rds-endpoint.amazonaws.com  # Endpoint của RDS
+      - DB_NAME=your_rds_db_name
+      - DB_USER=your_rds_db_user
+      - DB_PASSWORD=your_rds_db_password
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]

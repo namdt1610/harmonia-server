@@ -217,7 +217,7 @@ def test_search_tracks_by_artist_name(api_client, create_artist, create_track):
     assert response.status_code == status.HTTP_200_OK
     assert len(response.data) == 2
     
-    artists = [track['artist']['name'] for track in response.data]
+    artists = [track['artist_name'] for track in response.data]
     assert all(name == "Queen" for name in artists)
 
 # ========== Playlist Tests ==========

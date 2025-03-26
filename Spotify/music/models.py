@@ -40,7 +40,8 @@ class Track(models.Model):
     album = models.ForeignKey(Album, on_delete=models.SET_NULL, null=True, blank=True, related_name="tracks")
     artist = models.ForeignKey(Artist, on_delete=models.CASCADE, related_name="tracks")
     file = models.FileField(upload_to="tracks/", validators=[validate_audio_file], max_length=500)
-    duration = models.PositiveIntegerField(help_text="Duration in seconds", null=True, blank=True)  # Dùng giây thay vì phút
+    music_video = models.FileField(upload_to="music_videos/", blank=True, null=True, validators=[validate_audio_file], max_length=500)
+    duration = models.PositiveIntegerField(help_text="Duration in seconds", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
