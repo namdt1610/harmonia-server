@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
     'storages',
+    'corsheaders',
     
     # App của bạn
     'authentication',
@@ -97,9 +98,9 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = "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"
 SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = "http://127.0.0.1:8000/api/auth/google/callback/"
 
 AUTHENTICATION_BACKENDS = [
+    'authentication.backends.EmailOrUsernameBackend',
     'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
-    'social_core.backends.google.GoogleOAuth2',
+    # 'social_core.backends.google.GoogleOAuth2',
 ]
 
 REST_USE_JWT = True
@@ -120,6 +121,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'spotify.urls'
 

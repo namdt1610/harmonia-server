@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,19 +20,29 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 class LoginSerializer(serializers.Serializer):
-    username = serializers.CharField()
+    username_or_email = serializers.CharField()
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        from django.contrib.auth import authenticate
+        username_or_email = data["username_or_email"]
+        password = data["password"]
 
-        user = authenticate(username=data["username"], password=data["password"])
+        # Sử dụng custom backend để xác thực
+        user = authenticate(username=username_or_email, password=password)
         if not user:
             raise serializers.ValidationError("Sai thông tin đăng nhập!")
 
+        # Tạo JWT token
         refresh = RefreshToken.for_user(user)
+    
         return {
-            "user": UserSerializer(user).data,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+            },
             "access": str(refresh.access_token),
             "refresh": str(refresh),
         }
+    
+        

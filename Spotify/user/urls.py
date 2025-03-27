@@ -8,6 +8,4 @@ router.register(r'profiles', ProfileViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('profile/', include(router.urls)),
-    
 ]

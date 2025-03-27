@@ -8,7 +8,7 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
-
+    
 class ProfileViewSet(viewsets.ModelViewSet):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
@@ -18,7 +18,5 @@ class ProfileViewSet(viewsets.ModelViewSet):
         return Profile.objects.filter(user=self.request.user)
     
     def perform_update(self, serializer):
-        if self.request.user.is_superuser:  
-            return Profile.objects.all() 
         serializer.save(user=self.request.user)
 
