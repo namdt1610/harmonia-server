@@ -67,6 +67,7 @@ SITE_ID = 1  # Cần thiết cho django-allauth
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "authentication.middlewares.RedisTokenAuthentication", 
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -115,6 +116,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'django_ratelimit.middleware.RatelimitMiddleware'
 ]
 
 # CORS_ALLOW_ALL_ORIGINS = True
