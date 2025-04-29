@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'authentication',
     'user',  
     'music',
+    'chatbot'
 ]
 
 SITE_ID = 1  # Cần thiết cho django-allauth
@@ -150,6 +151,7 @@ if ENVIRONMENT == "production":
     load_dotenv(".env.prod")
 else:
     load_dotenv(".env.dev")
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
@@ -252,3 +254,14 @@ if 'test' in sys.argv:
             'NAME': ':memory:',
         }
     }
+
+# Cấu hình local media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR,'media')
+
+# Chỉ sử dụng S3 trong production
+if ENVIRONMENT == "production":
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+else:
+    # Sử dụng file system storage cho development
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'

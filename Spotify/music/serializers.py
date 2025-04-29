@@ -1,5 +1,10 @@
 from rest_framework import serializers
-from .models import Artist, Album, Track, Playlist
+from .models import Artist, Album, Track, Playlist, Genre, Favorite, UserActivity
+
+class GenreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Genre
+        fields = ['id', 'name']
 
 class ArtistSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,6 +23,15 @@ class TrackSerializer(serializers.ModelSerializer):
     artist = serializers.PrimaryKeyRelatedField(queryset=Artist.objects.all())
     artist_name = serializers.CharField(source='artist.name', read_only=True)
     album_title = serializers.CharField(source='album.title', read_only=True)
+    genres = GenreSerializer(many=True, read_only=True)
+    genres_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Genre.objects.all(),
+        many=True,
+        source='genres',
+        write_only=True,
+        required=False,
+    )
+    is_favorite = serializers.SerializerMethodField()
 
     class Meta:
         model = Track
@@ -31,6 +45,12 @@ class TrackSerializer(serializers.ModelSerializer):
             return int(value) 
         except ValueError:
             raise serializers.ValidationError("Duration must be a valid number.")
+        
+    def get_is_favorite(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Favorite.objects.filter(user=request.user, track=obj).exists()
+        return False
 
 class PlaylistSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField()
@@ -39,3 +59,31 @@ class PlaylistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Playlist
         fields = '__all__'
+
+    def get_tracks_count(self, obj):
+        return obj.tracks.count()
+    
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    track_details = TrackSerializer(source='track', read_only=True)
+    
+    class Meta:
+        model = Favorite
+        fields = ['id', 'user', 'track', 'track_details', 'created_at']
+        read_only_fields = ['user', 'created_at']
+    
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
+
+class UserActivitySerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    track_title = serializers.CharField(source='track.title', read_only=True)
+    
+    class Meta:
+        model = UserActivity
+        fields = ['id', 'user', 'username', 'track', 'track_title', 'playlist', 'action', 'timestamp']
+        read_only_fields = ['user', 'timestamp']

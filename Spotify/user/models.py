@@ -8,9 +8,9 @@ class Profile(models.Model):
       bio = models.TextField(null=True, blank=True)
       recently_played = models.ForeignKey('music.Track', null=True, blank=True, on_delete=models.SET_NULL, related_name='current_listeners')
       playlists = models.ManyToManyField('music.Playlist', blank=True, related_name='users')
-      favorite_tracks = models.ManyToManyField('music.Track', blank=True, related_name='favorited_by')
-      favorite_artists = models.ManyToManyField('music.Artist', blank=True, related_name='favorited_by')
-      favorite_albums = models.ManyToManyField('music.Album', blank=True, related_name='favorited_by')
+      favorite_tracks = models.ManyToManyField('music.Track', blank=True, related_name='favorited_by_profiles')
+      favorite_artists = models.ManyToManyField('music.Artist', blank=True, related_name='favorited_by_profiles')
+      favorite_albums = models.ManyToManyField('music.Album', blank=True, related_name='favorited_by_profiles')
       created_at = models.DateTimeField(auto_now_add=True)
 
       def __str__(self):
