@@ -6,6 +6,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django_ratelimit.decorators import ratelimit
 from django.core.cache import cache
 from .serializers import RegisterSerializer, LoginSerializer
+from django.utils.decorators import method_decorator
+from datetime import datetime, timezone
+from rest_framework.permissions import IsAuthenticated
 import logging
 logger = logging.getLogger(__name__)
 
@@ -22,48 +25,50 @@ class RegisterView(APIView):
 class LoginView(APIView):
     permission_classes = [AllowAny]
     
-    def get_rate_limit_key(request):
-        """Lấy user ID nếu đã login, nếu chưa thì dùng IP"""
+    def get_rate_limit_key(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             return f"user_{request.user.id}"
         return request.META.get("REMOTE_ADDR")
-    
-    @ratelimit(key=get_rate_limit_key, rate='5/m', method='POST', block=True)
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
+
+    @method_decorator(ratelimit(
+        key=get_rate_limit_key,
+        rate='5/m',
+        method='POST',
+        block=True
+    ))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
     
     def post(self, request):
         serializer = LoginSerializer(data=request.data, context={"request": request})
-        if serializer.is_valid():
-            data = serializer.validated_data
-            user = data["user"]
-            
-            # Đẩy refresh token lên cookie
-            refresh_token = data["refresh"]
-            access_token = data["access"]
-            
-            # Lưu access token vào cache với thời gian sống bằng thời gian sống của refresh token
-            access_lifetime = int(RefreshToken(refresh_token).access_token.lifetime.total_seconds())
-            refresh_lifetime = int(RefreshToken(refresh_token).lifetime.total_seconds())
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            cache.set(f"auth_token_{user.id}", access_token, timeout=access_lifetime)
-            cache.set(f"refresh_token_{user.id}", refresh_token, timeout=refresh_lifetime)
-            
-            secure = request.is_secure()  # False nếu không dùng HTTPS
-            response = Response(data, status=status.HTTP_200_OK)
-            response.set_cookie(
-                key="refresh",
-                value=refresh_token,
-                httponly=True,
-                secure=secure,
-                samesite="None",
-                expires=RefreshToken(refresh_token).access_token.lifetime,
-            )
-            logger.debug("Cookie set successfully")
-            return response
-        
-        logger.warning(f"Login failed for IP: {request.META.get('REMOTE_ADDR')}, Data: {request.data}")
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        data = serializer.validated_data
+        user = data["user"]
+        refresh_token = data["refresh"]
+        access_token = data["access"]
+
+        # Tính expires của refresh token
+        refresh_lifetime = RefreshToken(refresh_token).lifetime  # timedelta
+        expires_at = datetime.now(timezone.utc) + refresh_lifetime
+
+        response = Response({
+            "access": access_token,
+            "user": user,
+        }, status=status.HTTP_200_OK)
+
+        # Chỉ dùng cho local dev
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            expires=expires_at,
+            path="/",
+            samesite="lax",
+            secure=False,
+        )
+        return response
 
 class LogoutView(APIView):
     permission_classes = [AllowAny]
@@ -81,3 +86,20 @@ class LogoutView(APIView):
         response = Response({"message": "Logout successfully!"}, status=status.HTTP_200_OK)
         response.delete_cookie("refresh")
         return response
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return Response({"error": "User not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        user = request.user
+        data = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+        }
+        return Response(data, status=status.HTTP_200_OK)
