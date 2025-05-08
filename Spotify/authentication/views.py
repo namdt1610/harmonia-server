@@ -9,6 +9,8 @@ from .serializers import RegisterSerializer, LoginSerializer
 from django.utils.decorators import method_decorator
 from datetime import datetime, timezone
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.views import TokenRefreshView
+from django.http import JsonResponse
 import logging
 logger = logging.getLogger(__name__)
 
@@ -103,3 +105,39 @@ class MeView(APIView):
             "last_name": user.last_name,
         }
         return Response(data, status=status.HTTP_200_OK)
+    
+
+class CustomTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        try:
+            # Lấy refresh token từ cookie
+            refresh_token = request.COOKIES.get('refresh_token')
+            if not refresh_token:
+                return Response(
+                    {"error": "No refresh token found"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Validate refresh token
+            try:
+                refresh = RefreshToken(refresh_token)
+            except Exception as e:
+                logger.error(f"Invalid refresh token: {str(e)}")
+                return Response(
+                    {"error": "Invalid refresh token"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Tạo access token mới
+            access_token = str(refresh.access_token)
+            
+            return Response({
+                "access": access_token
+            })
+
+        except Exception as e:
+            logger.error(f"Error refreshing token: {str(e)}")
+            return Response(
+                {"error": "Failed to refresh token"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

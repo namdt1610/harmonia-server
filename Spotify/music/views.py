@@ -11,6 +11,10 @@ import logging
 from django.db.models import Q
 from django.http import FileResponse
 from django.conf import settings
+from django.core.cache import cache
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.db import models
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -68,10 +72,42 @@ class GenreViewSet(viewsets.ModelViewSet):
 class TrackViewSet(viewsets.ModelViewSet):
     queryset = Track.objects.all()
     serializer_class = TrackSerializer
-    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     filter_backends = [SearchFilter]
     search_fields = ['title', 'artist__name']
+    
+    
+    
+    @action(detail=False, methods=['get'], url_path='current-track')
+    def current_track(self, request):
+        """Get the currently playing track for the authenticated user"""
+        
+        # Get the most recent play activity for the user
+        recent_activity = UserActivity.objects.filter(
+            user=request.user,
+            action='play'
+        ).order_by('-timestamp').first()
+        
+        if not recent_activity or not recent_activity.track:
+            return Response({'error': 'No track is currently playing'}, 
+                          status=status.HTTP_404_NOT_FOUND)
+        
+        # Increment play count for the track
+        recent_activity.track.increment_play_count()
+        
+        # Return the track details
+        serializer = TrackSerializer(recent_activity.track)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def play(self, request, pk=None):
+        track = self.get_object()
+        UserActivity.objects.create(
+            user=request.user,
+            track=track,
+            action='play'
+        )
+        return Response({'status': 'play recorded'}, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=['get'])
     def stream(self, request, pk=None):
@@ -154,12 +190,12 @@ class TrackViewSet(viewsets.ModelViewSet):
     def video(self, request, pk=None):
         track = self.get_object()
         
-        if not track.video_file:
+        if not track.music_video:
             return Response({'error': 'No video available for this track'}, 
                            status=status.HTTP_404_NOT_FOUND)
         
         return Response({
-            'video_url': request.build_absolute_uri(track.video_file.url),
+            'video_url': request.build_absolute_uri(track.music_video.url),
             'thumbnail': request.build_absolute_uri(track.video_thumbnail.url) if track.video_thumbnail else None
         })
     
@@ -189,12 +225,73 @@ class TrackViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class PlaylistViewSet(viewsets.ModelViewSet):
-    queryset = Playlist.objects.all()
     serializer_class = PlaylistSerializer
-    permission_classes = [permissions.IsAuthenticated]  # Chỉ user đăng nhập mới được thao tác
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+        queryset = Playlist.objects.select_related('user').prefetch_related('tracks')
+        
+        if self.action == 'list':
+            # Cache the queryset for 5 minutes
+            cache_key = f'playlist_list_{self.request.user.id}'
+            cached_queryset = cache.get(cache_key)
+            if cached_queryset is None:
+                cached_queryset = list(queryset.filter(user=self.request.user))
+                cache.set(cache_key, cached_queryset, 300)  # 5 minutes cache
+            return cached_queryset
+            
+        return queryset.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)  # Gán user tạo playlist
+        playlist = serializer.save(user=self.request.user)
+        # Invalidate user's playlist cache
+        cache.delete(f'playlist_list_{self.request.user.id}')
+        # Record user activity
+        UserActivity.objects.create(
+            user=self.request.user,
+            playlist=playlist,
+            action='create_playlist'
+        )
+
+    def perform_update(self, serializer):
+        playlist = serializer.save()
+        # Invalidate user's playlist cache
+        cache.delete(f'playlist_list_{self.request.user.id}')
+        # Record user activity
+        UserActivity.objects.create(
+            user=self.request.user,
+            playlist=playlist,
+            action='update_playlist'
+        )
+
+    def perform_destroy(self, instance):
+        # Record user activity before deletion
+        UserActivity.objects.create(
+            user=self.request.user,
+            playlist=instance,
+            action='delete_playlist'
+        )
+        instance.delete()
+        # Invalidate user's playlist cache
+        cache.delete(f'playlist_list_{self.request.user.id}')
+
+    @method_decorator(cache_page(60 * 30))  # Cache for 30 minutes
+    @action(detail=False)
+    def featured(self, request):
+        """Get featured playlists"""
+        cache_key = 'featured_playlists'
+        cached_playlists = cache.get(cache_key)
+        
+        if cached_playlists is None:
+            # Get playlists with most tracks
+            playlists = Playlist.objects.annotate(
+                track_count=models.Count('tracks')
+            ).order_by('-track_count')[:10]
+            cached_playlists = self.get_serializer(playlists, many=True).data
+            cache.set(cache_key, cached_playlists, 1800)  # 30 minutes cache
+            
+        return Response(cached_playlists)
 
 class UploadTrackViewSet(viewsets.ModelViewSet):
     queryset = Track.objects.all()
