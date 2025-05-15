@@ -7,7 +7,7 @@ from django_ratelimit.decorators import ratelimit
 from django.core.cache import cache
 from .serializers import RegisterSerializer, LoginSerializer
 from django.utils.decorators import method_decorator
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.http import JsonResponse
@@ -51,21 +51,31 @@ class LoginView(APIView):
         refresh_token = data["refresh"]
         access_token = data["access"]
 
-        # Tính expires của refresh token
-        refresh_lifetime = RefreshToken(refresh_token).lifetime  # timedelta
-        expires_at = datetime.now(timezone.utc) + refresh_lifetime
+        # Set expiration times for cookies - consistent with cache timeouts in serializer
+        access_expires = datetime.now(timezone.utc) + timedelta(hours=24)
+        refresh_expires = datetime.now(timezone.utc) + timedelta(days=7)
 
         response = Response({
-            "access": access_token,
             "user": user,
+            "access": access_token,  # Return the token in the response too
         }, status=status.HTTP_200_OK)
 
-        # Chỉ dùng cho local dev
+        # Set refresh token cookie
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
             httponly=True,
-            expires=expires_at,
+            expires=refresh_expires,
+            path="/",
+            samesite="lax",
+            secure=False,
+        )
+        # Set access token cookie - EXACT name match with middleware
+        response.set_cookie(
+            key="access_token",  # This name MUST match what's in middleware
+            value=access_token,
+            httponly=True,
+            expires=access_expires,
             path="/",
             samesite="lax",
             secure=False,
@@ -76,17 +86,20 @@ class LogoutView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        if not request.user.is_authenticated:
-            return Response({"error": "User not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+        # Try to get tokens from cookies
+        access_token = request.COOKIES.get('access_token')
+        refresh_token = request.COOKIES.get('refresh_token')
         
-        # Xóa token trong cache
-        user = request.user
-        cache.delete(f"auth_token_{user.id}")
-        cache.delete(f"refresh_token_{user.id}")
+        # Delete tokens from cache if found
+        if access_token:
+            cache.delete(f"auth_token_{access_token}")
+        if refresh_token:
+            cache.delete(f"refresh_token_{refresh_token}")
 
-        # Xóa cookie
+        # Delete cookies
         response = Response({"message": "Logout successfully!"}, status=status.HTTP_200_OK)
-        response.delete_cookie("refresh")
+        response.delete_cookie("access_token")
+        response.delete_cookie("refresh_token")
         return response
 
 class MeView(APIView):
@@ -101,13 +114,13 @@ class MeView(APIView):
             "id": user.id,
             "username": user.username,
             "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
         }
         return Response(data, status=status.HTTP_200_OK)
     
 
 class CustomTokenRefreshView(TokenRefreshView):
+    permission_classes = [AllowAny]
+    
     def post(self, request, *args, **kwargs):
         try:
             # Lấy refresh token từ cookie
@@ -131,9 +144,27 @@ class CustomTokenRefreshView(TokenRefreshView):
             # Tạo access token mới
             access_token = str(refresh.access_token)
             
-            return Response({
+            # Set expiration time for cookie - matching the JWT lifetime
+            access_expires = datetime.now(timezone.utc) + timedelta(days=1)
+            
+            # Create response with token in body
+            response = Response({
                 "access": access_token
             })
+            
+            # Set the access token cookie
+            response.set_cookie(
+                key="access_token",
+                value=access_token,
+                httponly=True,
+                expires=access_expires,
+                path="/",
+                samesite="lax",
+                secure=False,
+            )
+            
+            logger.debug(f"Token refresh successful, new access token cookie set")
+            return response
 
         except Exception as e:
             logger.error(f"Error refreshing token: {str(e)}")

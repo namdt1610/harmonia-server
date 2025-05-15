@@ -1,6 +1,6 @@
 from rest_framework import viewsets, permissions, status, serializers
-from .models import Artist, Album, Track, Playlist, Genre, Favorite, UserActivity
-from .serializers import ArtistSerializer, AlbumSerializer, TrackSerializer, PlaylistSerializer, GenreSerializer, FavoriteSerializer, UserActivitySerializer
+from .models import Artist, Album, Track, Playlist, Genre, UserActivity
+from .serializers import ArtistSerializer, AlbumSerializer, TrackSerializer, PlaylistSerializer, GenreSerializer, UserActivitySerializer
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
@@ -15,6 +15,7 @@ from django.core.cache import cache
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.db import models
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -76,20 +77,40 @@ class TrackViewSet(viewsets.ModelViewSet):
     filter_backends = [SearchFilter]
     search_fields = ['title', 'artist__name']
     
-    
-    
-    @action(detail=False, methods=['get'], url_path='current-track')
+    @action(detail=False, methods=['get'], url_path='current-track', permission_classes=[permissions.AllowAny])
     def current_track(self, request):
         """Get the currently playing track for the authenticated user"""
         
-        # Get the most recent play activity for the user
+        # First, try to get the user from the authentication mechanism
+        # This will use the cookie-based authentication
+        user = request.user
+        
+        # Check if user is authenticated or AnonymousUser
+        if not user or not user.is_authenticated:
+            # For anonymous users, return the most recent track from cache or database
+            # This could be a default track or a popular track
+            most_popular_track = Track.objects.order_by('-play_count').first()
+            if most_popular_track:
+                serializer = TrackSerializer(most_popular_track)
+                return Response(serializer.data)
+            else:
+                return Response({'error': 'No tracks available'}, 
+                              status=status.HTTP_404_NOT_FOUND)
+        
+        # For authenticated users, get their most recent play activity
         recent_activity = UserActivity.objects.filter(
-            user=request.user,
+            user=user,
             action='play'
         ).order_by('-timestamp').first()
         
         if not recent_activity or not recent_activity.track:
-            return Response({'error': 'No track is currently playing'}, 
+            # If authenticated but no recent activity, fall back to popular track
+            most_popular_track = Track.objects.order_by('-play_count').first()
+            if most_popular_track:
+                serializer = TrackSerializer(most_popular_track)
+                return Response(serializer.data)
+            else:
+                return Response({'error': 'No track is currently playing'}, 
                           status=status.HTTP_404_NOT_FOUND)
         
         # Increment play count for the track
@@ -230,18 +251,28 @@ class PlaylistViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPagination
 
     def get_queryset(self):
-        queryset = Playlist.objects.select_related('user').prefetch_related('tracks')
+        try:
+            queryset = Playlist.objects.select_related('user').prefetch_related(
+                'tracks',
+                'tracks__artist',
+                'tracks__album',
+                'tracks__genres'
+            )
         
-        if self.action == 'list':
-            # Cache the queryset for 5 minutes
-            cache_key = f'playlist_list_{self.request.user.id}'
-            cached_queryset = cache.get(cache_key)
-            if cached_queryset is None:
-                cached_queryset = list(queryset.filter(user=self.request.user))
-                cache.set(cache_key, cached_queryset, 300)  # 5 minutes cache
-            return cached_queryset
-            
-        return queryset.filter(user=self.request.user)
+            if self.action == 'list':
+                # Cache the queryset for 5 minutes
+                cache_key = f'playlist_list_{self.request.user.id}'
+                cached_queryset = cache.get(cache_key)
+                if cached_queryset is None:
+                    cached_queryset = list(queryset.filter(user=self.request.user))
+                    cache.set(cache_key, cached_queryset, 300)  # 5 minutes cache
+                return cached_queryset
+                
+            return queryset.filter(user=self.request.user)
+        except Exception as e:
+            logger.error(f"Error getting playlists: {str(e)}")
+            # Return an empty queryset if the table doesn't exist yet
+            return Playlist.objects.none()
 
     def perform_create(self, serializer):
         playlist = serializer.save(user=self.request.user)
@@ -280,19 +311,54 @@ class PlaylistViewSet(viewsets.ModelViewSet):
     @action(detail=False)
     def featured(self, request):
         """Get featured playlists"""
-        cache_key = 'featured_playlists'
-        cached_playlists = cache.get(cache_key)
-        
-        if cached_playlists is None:
-            # Get playlists with most tracks
-            playlists = Playlist.objects.annotate(
-                track_count=models.Count('tracks')
-            ).order_by('-track_count')[:10]
-            cached_playlists = self.get_serializer(playlists, many=True).data
-            cache.set(cache_key, cached_playlists, 1800)  # 30 minutes cache
+        try:
+            cache_key = 'featured_playlists'
+            cached_playlists = cache.get(cache_key)
             
-        return Response(cached_playlists)
-
+            if cached_playlists is None:
+                # Get playlists with most tracks
+                playlists = Playlist.objects.annotate(
+                    track_count=models.Count('tracks')
+                ).order_by('-track_count')[:10]
+                cached_playlists = self.get_serializer(playlists, many=True).data
+                cache.set(cache_key, cached_playlists, 1800)  # 30 minutes cache
+                
+            return Response(cached_playlists)
+        except Exception as e:
+            logger.error(f"Error getting featured playlists: {str(e)}")
+            return Response([], status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'], url_path='add-track/(?P<track_id>\\d+)')
+    def add_track(self, request, pk=None, track_id=None):
+        try:
+            playlist = Playlist.objects.get(id=pk)
+            track = Track.objects.get(id=track_id)
+            playlist.tracks.add(track)
+            playlist.save()
+            return Response({'status': 'track added'}, status=status.HTTP_200_OK)
+        except Playlist.DoesNotExist:
+            return Response({'error': 'Playlist not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Track.DoesNotExist:
+            return Response({'error': 'Track not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error adding track to playlist: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=['post'], url_path='remove-track/(?P<track_id>\\d+)')
+    def remove_track(self, request, pk=None, track_id=None):
+        try:
+            playlist = Playlist.objects.get(id=pk)
+            track = Track.objects.get(id=track_id)
+            playlist.tracks.remove(track)
+            return Response({'status': 'track removed from playlist'}, status=status.HTTP_200_OK)
+        except Playlist.DoesNotExist:
+            return Response({'error': 'Playlist not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Track.DoesNotExist:
+            return Response({'error': 'Track not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error removing track from playlist: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
 class UploadTrackViewSet(viewsets.ModelViewSet):
     queryset = Track.objects.all()
     serializer_class = TrackSerializer
@@ -348,49 +414,6 @@ class TrackFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Track
         fields = '__all__'
-        
-class FavoriteViewSet(viewsets.ModelViewSet):
-    serializer_class = FavoriteSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        return Favorite.objects.filter(user=self.request.user)
-    
-    def create(self, request, *args, **kwargs):
-        track_id = request.data.get('track')
-        
-        # Check if the favorite already exists
-        existing = Favorite.objects.filter(user=request.user, track_id=track_id).first()
-        if existing:
-            return Response({'error': 'Track already in favorites'}, 
-                           status=status.HTTP_400_BAD_REQUEST)
-        
-        response = super().create(request, *args, **kwargs)
-        
-        # Record user activity
-        if response.status_code == status.HTTP_201_CREATED:
-            UserActivity.objects.create(
-                user=request.user,
-                track_id=track_id,
-                action='like'
-            )
-        
-        return response
-    
-    @action(detail=False, methods=['DELETE'])
-    def remove(self, request):
-        track_id = request.query_params.get('track_id')
-        if not track_id:
-            return Response({'error': 'track_id parameter is required'}, 
-                           status=status.HTTP_400_BAD_REQUEST)
-        
-        favorite = Favorite.objects.filter(user=request.user, track_id=track_id).first()
-        if not favorite:
-            return Response({'error': 'Track not found in favorites'}, 
-                           status=status.HTTP_404_NOT_FOUND)
-        
-        favorite.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class UserActivityViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserActivitySerializer

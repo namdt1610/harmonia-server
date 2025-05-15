@@ -102,18 +102,6 @@ class Playlist(models.Model):
     def __str__(self):
         return f"{self.name} ({self.user.username})"
 
-class Favorite(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="favorites")
-    track = models.ForeignKey(Track, on_delete=models.CASCADE, related_name="favorites")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ("user", "track")  # Một user không thể thích một bài hát nhiều lần
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"{self.user.username} - {self.track.title}"
-
 class UserActivity(models.Model):
     ACTION_CHOICES = (
         ('play', 'Played'),
