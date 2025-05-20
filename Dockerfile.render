@@ -1,0 +1,47 @@
+# Base Python image - using a smaller image for Render
+FROM python:3.12.3-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV DISABLE_DEV_SHM_USAGE=1
+ENV NO_SANDBOX=1
+# Set Django settings module for Render
+ENV DJANGO_SETTINGS_MODULE=spotify.settings_render
+
+# Set work directory
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    make \
+    build-essential \
+    libdbus-1-dev \
+    pkg-config \
+    libglib2.0-dev \
+    postgresql-client \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy project
+COPY . .
+
+# Collect static files - will be served by Render static service
+RUN python manage.py collectstatic --noinput
+
+# Make sure the Render entrypoint script is executable
+COPY entrypoint.render.sh .
+RUN chmod +x entrypoint.render.sh
+
+# Run the Render entrypoint script
+CMD ["./entrypoint.render.sh"]
+
+# Render sets the PORT environment variable dynamically
+ENV PORT=8000
+EXPOSE $PORT 

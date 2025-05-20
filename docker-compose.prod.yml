@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+    db:
+        image: postgres:14
+        volumes:
+            - postgres_data:/var/lib/postgresql/data/
+        environment:
+            - POSTGRES_DB=${DB_NAME:-sptf}
+            - POSTGRES_USER=${DB_USER:-postgres_sptf}
+            - POSTGRES_PASSWORD=${DB_PASSWORD:-nam}
+        healthcheck:
+            test:
+                [
+                    'CMD-SHELL',
+                    'pg_isready -U ${DB_USER:-postgres_sptf} -d ${DB_NAME:-sptf}',
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        restart: always
+
+    web:
+        build: .
+        restart: always
+        environment:
+            - DEBUG=False
+            - DJANGO_ENV=production
+            - DB_HOST=db
+            - DB_NAME=${DB_NAME:-sptf}
+            - DB_USER=${DB_USER:-postgres_sptf}
+            - DB_PASSWORD=${DB_PASSWORD:-nam}
+            - DB_PORT=5432
+            - WAIT_FOR_DB=true
+            - SECRET_KEY=${SECRET_KEY}
+            - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+        volumes:
+            - static_volume:/app/staticfiles
+            - media_volume:/app/media
+        depends_on:
+            db:
+                condition: service_healthy
+        command: './entrypoint.sh'
+
+    nginx:
+        image: nginx:1.25
+        ports:
+            - '80:80'
+            - '443:443'
+        volumes:
+            - ./nginx/conf.d:/etc/nginx/conf.d
+            - ./nginx/ssl:/etc/nginx/ssl
+            - static_volume:/var/www/html/static
+            - media_volume:/var/www/html/media
+        depends_on:
+            - web
+        restart: always
+
+volumes:
+    postgres_data:
+    static_volume:
+    media_volume:

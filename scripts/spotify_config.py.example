@@ -1,0 +1,6 @@
+# Spotify API credentials example
+# Copy this file to spotify_config.py and replace with your actual credentials
+
+# Get these from https://developer.spotify.com/dashboard/
+SPOTIFY_CLIENT_ID = 'your_client_id_here'
+SPOTIFY_CLIENT_SECRET = 'your_client_secret_here' 

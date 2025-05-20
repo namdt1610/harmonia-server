@@ -1,0 +1,48 @@
+services:
+  # Django Web Service
+  - type: web
+    name: spotify-django-backend
+    env: docker
+    dockerfilePath: ./Dockerfile.render
+    region: oregon
+    plan: free
+    healthCheckPath: /api/health/
+    envVars:
+      - key: DEBUG
+        value: false
+      - key: DJANGO_ENV
+        value: production
+      - key: DJANGO_SETTINGS_MODULE
+        value: spotify.settings_render
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com,localhost,127.0.0.1"
+      - key: DB_HOST
+        fromDatabase:
+          name: spotify-db
+          property: host
+      - key: DB_NAME
+        fromDatabase:
+          name: spotify-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: spotify-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: spotify-db
+          property: password
+      - key: DB_PORT
+        fromDatabase:
+          name: spotify-db
+          property: port
+      - key: WAIT_FOR_DB
+        value: true
+
+databases:
+  - name: spotify-db
+    databaseName: sptf
+    user: postgres_sptf
+    plan: free 
