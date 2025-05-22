@@ -6,7 +6,6 @@ certifi==2025.1.31
 cffi==1.17.1
 charset-normalizer==3.4.1
 cryptography==44.0.2
-dbus-python==1.4.0
 defusedxml==0.7.1
 dj-rest-auth==7.0.1
 Django==5.1.7
