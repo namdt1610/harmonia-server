@@ -1,3 +1,13 @@
+import os
+import sys
+# Add the project directory to Python path
+project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_dir)
+
+# Set up Django environment
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'spotify.settings')
+import django
+django.setup()
 from tracks.models import Track
 
 def assign_demo_video():
@@ -10,4 +20,7 @@ def assign_demo_video():
 # Để chạy script này:
 # python manage.py shell
 # >>> from scripts.assign_demo_video import assign_demo_video
-# >>> assign_demo_video() 
+# >>> assign_demo_video()
+
+if __name__ == "__main__":
+    assign_demo_video() 

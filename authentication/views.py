@@ -1,20 +1,20 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from django_ratelimit.decorators import ratelimit
 from django.core.cache import cache
 from .serializers import RegisterSerializer, LoginSerializer
 from django.utils.decorators import method_decorator
 from datetime import datetime, timezone, timedelta
-from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.http import JsonResponse
 import logging
 import jwt
 from django.conf import settings
 from .models import TokenBlacklist
+from django.contrib.auth.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -87,49 +87,82 @@ class LoginView(APIView):
         return response
 
 class LogoutView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # Allow unauthenticated access for logout
 
     def post(self, request):
-        # Lấy token từ cookie hoặc header
-        access_token = request.COOKIES.get('access_token')
-        refresh_token = request.COOKIES.get('refresh_token')
-        
-        # Thêm token vào blacklist nếu tồn tại
-        if access_token:
-            try:
-                # Parse token để lấy thời gian hết hạn
-                token = AccessToken(access_token)
-                exp_timestamp = token.payload.get('exp')
-                expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
-                
-                # Thêm vào blacklist
-                TokenBlacklist.objects.create(
-                    token=access_token,
-                    expires_at=expires_at
-                )
-            except Exception as e:
-                logger.error(f"Error blacklisting access token: {str(e)}")
-        
-        if refresh_token:
-            try:
-                # Parse token để lấy thời gian hết hạn
-                token = RefreshToken(refresh_token)
-                exp_timestamp = token.payload.get('exp')
-                expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
-                
-                # Thêm vào blacklist
-                TokenBlacklist.objects.create(
-                    token=refresh_token,
-                    expires_at=expires_at
-                )
-            except Exception as e:
-                logger.error(f"Error blacklisting refresh token: {str(e)}")
-        
-        # Delete cookies
-        response = Response({"message": "Logout successfully!"}, status=status.HTTP_200_OK)
-        response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token")
-        return response
+        try:
+            # Lấy token từ cookie
+            access_token = request.COOKIES.get('access_token')
+            refresh_token = request.COOKIES.get('refresh_token')
+            
+            # Thêm token vào blacklist nếu tồn tại
+            if access_token:
+                try:
+                    # Parse token để lấy thời gian hết hạn
+                    token = AccessToken(access_token)
+                    exp_timestamp = token.payload.get('exp')
+                    expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
+                    
+                    # Thêm vào blacklist
+                    TokenBlacklist.objects.create(
+                        token=access_token,
+                        expires_at=expires_at
+                    )
+                except Exception as e:
+                    logger.error(f"Error blacklisting access token: {str(e)}")
+            
+            if refresh_token:
+                try:
+                    # Parse token để lấy thời gian hết hạn
+                    token = RefreshToken(refresh_token)
+                    exp_timestamp = token.payload.get('exp')
+                    expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
+                    
+                    # Thêm vào blacklist
+                    TokenBlacklist.objects.create(
+                        token=refresh_token,
+                        expires_at=expires_at
+                    )
+                except Exception as e:
+                    logger.error(f"Error blacklisting refresh token: {str(e)}")
+            
+            # Xóa cookies với các options bảo mật
+            response = Response({"message": "Logout successfully!"}, status=status.HTTP_200_OK)
+            
+            # Xóa access token cookie
+            response.delete_cookie(
+                "access_token",
+                path="/",
+                domain=None,
+                samesite="lax"
+            )
+            
+            # Xóa refresh token cookie
+            response.delete_cookie(
+                "refresh_token",
+                path="/",
+                domain=None,
+                samesite="lax"
+            )
+            
+            # Log logout action
+            if access_token:
+                try:
+                    user_id = AccessToken(access_token).payload.get('user_id')
+                    if user_id:
+                        user = User.objects.get(id=user_id)
+                        logger.info(f"User {user.username} logged out successfully")
+                except Exception as e:
+                    logger.error(f"Error getting user info for logout: {str(e)}")
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error during logout: {str(e)}")
+            return Response(
+                {"error": "An error occurred during logout"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
@@ -143,6 +176,7 @@ class MeView(APIView):
             "id": user.id,
             "username": user.username,
             "email": user.email,
+            "is_superuser": user.is_superuser,
         }
         return Response(data, status=status.HTTP_200_OK)
     

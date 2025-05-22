@@ -28,6 +28,12 @@ class JWTAuthentication(BaseAuthentication):
     def authenticate(self, request):
         # Check if the path is exempt from authentication
         path = request.path_info
+        
+        # Early return for logout path - don't do any token refresh
+        if path.endswith('/logout/'):
+            logger.debug(f"Path {path} is logout - skipping token refresh")
+            return None
+            
         for exempt_url in self.exempt_urls:
             if re.match(exempt_url, path):
                 logger.debug(f"Path {path} is exempt from authentication")
@@ -72,7 +78,7 @@ class JWTAuthentication(BaseAuthentication):
         except TokenError as e:
             logger.debug(f"Access token error: {str(e)}")
             # Token has expired, try to refresh if refresh token available
-            if refresh_token_str:
+            if refresh_token_str:  # Removed the logout check since we handle it earlier
                 try:
                     # Check if refresh token is blacklisted
                     if TokenBlacklist.objects.filter(token=refresh_token_str).exists():

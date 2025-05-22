@@ -5,7 +5,7 @@ from albums.serializers import AlbumSerializer
 from artists.serializers import ArtistSerializer
 
 class TrackSerializer(serializers.ModelSerializer):
-    album = serializers.PrimaryKeyRelatedField(queryset=Album.objects.all(), required=False)
+    album = serializers.PrimaryKeyRelatedField(queryset=Album.objects.all(), required=False, allow_null=True)
     artist = serializers.PrimaryKeyRelatedField(queryset=Artist.objects.all())
     artist_name = serializers.CharField(source='artist.name', read_only=True)
     album_title = serializers.CharField(source='album.title', read_only=True)
