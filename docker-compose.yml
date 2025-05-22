@@ -22,7 +22,7 @@ services:
         network_mode: 'host'
         environment:
             - DEBUG=True
-            - DB_HOST=localhost
+            - DB_HOST=db
             - DB_NAME=sptf
             - DB_USER=postgres_sptf
             - DB_PASSWORD=nam
