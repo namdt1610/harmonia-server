@@ -9,7 +9,7 @@ from spotify.settings import *  # Import the base settings
 # Render-specific settings
 
 # Allowed hosts should include the Render domain
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'https://spotify-django-backend.onrender.com').split(',')
 
 # Security settings for production
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'

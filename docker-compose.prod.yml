@@ -2,18 +2,18 @@ version: '3.8'
 
 services:
     db:
-        image: postgres:14
+        image: postgres:16
         volumes:
             - postgres_data:/var/lib/postgresql/data/
         environment:
-            - POSTGRES_DB=${DB_NAME:-sptf}
-            - POSTGRES_USER=${DB_USER:-postgres_sptf}
-            - POSTGRES_PASSWORD=${DB_PASSWORD:-nam}
+            - POSTGRES_DB=${DB_NAME:-harmonia_n6aa}
+            - POSTGRES_USER=${DB_USER:-harmonia}
+            - POSTGRES_PASSWORD=${DB_PASSWORD:-XNQEKZXJqwFoHVuFqQJcX1ndaVAhm8oc}
         healthcheck:
             test:
                 [
                     'CMD-SHELL',
-                    'pg_isready -U ${DB_USER:-postgres_sptf} -d ${DB_NAME:-sptf}',
+                    'pg_isready -U ${DB_USER:-harmonia} -d ${DB_NAME:-harmonia_n6aa}',
                 ]
             interval: 5s
             timeout: 5s
@@ -27,13 +27,13 @@ services:
             - DEBUG=False
             - DJANGO_ENV=production
             - DB_HOST=db
-            - DB_NAME=${DB_NAME:-sptf}
-            - DB_USER=${DB_USER:-postgres_sptf}
-            - DB_PASSWORD=${DB_PASSWORD:-nam}
+            - DB_NAME=${DB_NAME:-harmonia_n6aa}
+            - DB_USER=${DB_USER:-harmonia}
+            - DB_PASSWORD=${DB_PASSWORD:-XNQEKZXJqwFoHVuFqQJcX1ndaVAhm8oc}
             - DB_PORT=5432
             - WAIT_FOR_DB=true
             - SECRET_KEY=${SECRET_KEY}
-            - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+            - ALLOWED_HOSTS=${ALLOWED_HOSTS:-harmonia-n6aa.onrender.com}
         volumes:
             - static_volume:/app/staticfiles
             - media_volume:/app/media
