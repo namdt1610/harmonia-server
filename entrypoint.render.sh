@@ -11,7 +11,14 @@ echo "Waiting for postgres..."
 max_retries=30
 retry_count=0
 
-while ! pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER; do
+# Print database connection details for debugging
+echo "Database connection details:"
+echo "Host: $DB_HOST"
+echo "Port: $DB_PORT"
+echo "User: $DB_USER"
+echo "Database: $DB_NAME"
+
+while ! pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER"; do
     retry_count=$((retry_count + 1))
     if [ $retry_count -ge $max_retries ]; then
         echo "Could not connect to PostgreSQL after $max_retries attempts. Exiting..."
