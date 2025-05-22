@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Album, Artist, Genre
+from .models import Album, Artist
+from genres.models import Genre
 from genres.serializers import GenreSerializer
 
 class AlbumSerializer(serializers.ModelSerializer):
