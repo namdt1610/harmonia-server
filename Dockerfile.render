@@ -1,5 +1,5 @@
 # Base Python image - using a smaller image for Render
-FROM python:3.12.3-slim
+FROM python:3.11-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -8,6 +8,7 @@ ENV DISABLE_DEV_SHM_USAGE=1
 ENV NO_SANDBOX=1
 # Set Django settings module for Render
 ENV DJANGO_SETTINGS_MODULE=spotify.settings_render
+ENV SECRET_KEY=django-insecure-temporary-key-for-build
 
 # Set work directory
 WORKDIR /app
@@ -27,7 +28,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip setuptools wheel
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --retries 10 --timeout 100 -r requirements.txt
 
 # Copy project
 COPY . .
