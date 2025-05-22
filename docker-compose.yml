@@ -19,7 +19,6 @@ services:
 
     web:
         build: .
-        network_mode: 'host'
         environment:
             - DEBUG=True
             - DB_HOST=db
