@@ -1,12 +1,12 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 from django.conf.urls.static import static
 from tracks.views import media_stream
 
 def health_check(request):
-    return JsonResponse({"status": "ok"})
+    return HttpResponse("OK")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
