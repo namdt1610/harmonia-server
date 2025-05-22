@@ -1,8 +1,5 @@
-import os
 import pytest
-import tempfile
 from io import BytesIO
-from django.urls import reverse
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient

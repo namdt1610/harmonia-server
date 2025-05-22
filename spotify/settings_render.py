@@ -3,7 +3,6 @@ Django settings specific for Render deployment
 """
 
 import os
-from pathlib import Path
 from spotify.settings import *  # Import the base settings
 
 # Render-specific settings

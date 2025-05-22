@@ -2,7 +2,6 @@ import os
 import sys
 import django
 from django.core.files import File
-from datetime import datetime
 
 # Add the project directory to Python path
 project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -15,7 +14,6 @@ django.setup()
 from django.contrib.auth.models import User
 from artists.models import Artist
 from tracks.models import Track
-from albums.models import Album
 from playlists.models import Playlist
 
 def create_artists_from_tracks():

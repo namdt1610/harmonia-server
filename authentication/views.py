@@ -4,15 +4,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from django_ratelimit.decorators import ratelimit
-from django.core.cache import cache
 from .serializers import RegisterSerializer, LoginSerializer
 from django.utils.decorators import method_decorator
 from datetime import datetime, timezone, timedelta
 from rest_framework_simplejwt.views import TokenRefreshView
-from django.http import JsonResponse
 import logging
-import jwt
-from django.conf import settings
 from .models import TokenBlacklist
 from django.contrib.auth.models import User
 

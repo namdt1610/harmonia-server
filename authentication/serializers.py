@@ -1,9 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
-from django.core.cache import cache
-import secrets
-import uuid
 import logging
 from rest_framework_simplejwt.tokens import RefreshToken
 

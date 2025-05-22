@@ -1,8 +1,6 @@
 from rest_framework import serializers
 from .models import Track, Album, Artist, Genre
 from genres.serializers import GenreSerializer
-from albums.serializers import AlbumSerializer
-from artists.serializers import ArtistSerializer
 
 class TrackSerializer(serializers.ModelSerializer):
     album = serializers.PrimaryKeyRelatedField(queryset=Album.objects.all(), required=False, allow_null=True)

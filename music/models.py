@@ -1,5 +1,3 @@
-from django.db import models
-from django.core.exceptions import ValidationError
 
 # Import models from separate apps
 from artists.models import Artist

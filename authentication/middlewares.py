@@ -1,10 +1,7 @@
-from django.core.cache import cache
 from rest_framework.authentication import get_authorization_header, BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth.models import User
 import logging
-import jwt
-from django.conf import settings
 import re
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken, TokenError
 from datetime import datetime, timezone, timedelta

@@ -1,6 +1,5 @@
 from django.db import models
 from artists.models import Artist
-from genres.models import Genre
 
 class Album(models.Model):
     title = models.CharField(max_length=255, db_index=True)

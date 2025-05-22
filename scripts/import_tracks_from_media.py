@@ -13,8 +13,6 @@ django.setup()
 
 from tracks.models import Track
 from artists.models import Artist
-from albums.models import Album
-from django.core.files import File
 
 TRACKS_DIR = os.path.join(project_dir, 'media', 'tracks')
 

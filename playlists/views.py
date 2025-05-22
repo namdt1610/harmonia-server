@@ -39,7 +39,7 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         )
 
     def perform_update(self, serializer):
-        playlist = serializer.save()
+        serializer.save()
         # Invalidate user's playlist cache
         cache.delete(f'playlist_list_{self.request.user.id}')
 

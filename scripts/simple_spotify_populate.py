@@ -4,10 +4,8 @@ import sys
 import django
 import requests
 import base64
-import json
 import time
 import random
-from io import BytesIO
 from django.core.files.base import ContentFile
 
 # Set up Django environment

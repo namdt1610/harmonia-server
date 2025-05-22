@@ -1,5 +1,5 @@
 # Build stage
-FROM python:3.12.3-slim as builder
+FROM python:3.12.3-alpine as builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -11,17 +11,16 @@ ENV SECRET_KEY=django-insecure-temporary-key-for-build
 WORKDIR /app
 
 # Install build dependencies
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
     gcc \
-    g++ \
+    musl-dev \
+    postgresql-dev \
+    python3-dev \
+    libffi-dev \
+    openssl-dev \
+    cargo \
     make \
-    build-essential \
-    libdbus-1-dev \
-    pkg-config \
-    libglib2.0-dev \
-    postgresql-client \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    build-base
 
 # Install Python dependencies
 COPY requirements.txt .
@@ -29,7 +28,7 @@ RUN pip install --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir --retries 10 --timeout 100 -r requirements.txt
 
 # Final stage
-FROM python:3.12.3-slim
+FROM python:3.12.3-alpine
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -47,10 +46,11 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/pyth
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 # Install runtime dependencies only
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
     postgresql-client \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    libffi \
+    openssl \
+    && rm -rf /var/cache/apk/*
 
 # Copy project files
 COPY . .

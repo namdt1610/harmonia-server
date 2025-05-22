@@ -7,9 +7,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import time
 import random
 import requests
-from io import BytesIO
 from django.core.files.base import ContentFile
-from django.core.files import File
 
 # Set up Django environment
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
