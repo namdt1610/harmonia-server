@@ -9,7 +9,7 @@ from spotify.settings import *  # Import the base settings
 # Render-specific settings
 
 # Allowed hosts should include the Render domain
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'https://spotify-django-backend.onrender.com').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'spotify-django-backend.onrender.com').split(',')
 
 # Security settings for production
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
@@ -68,8 +68,10 @@ CSRF_COOKIE_HTTPONLY = True
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
-    "https://your-frontend-domain.onrender.com",
     "http://localhost:3000",
+    "https://harmonia-wheat.vercel.app",
+    "https://harmonia-namdt1610s-projects.vercel.app",
+    "https://harmonia-git-master-namdt1610s-projects.vercel.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
 

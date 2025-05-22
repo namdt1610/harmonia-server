@@ -18,3 +18,15 @@
 **/*.log
 **/.coverage
 **/htmlcov
+**/media/*
+**/staticfiles/*
+**/static/*
+**/tmp
+**/temp
+**/*.bak
+**/*.swp
+**/*.swo
+**/local_settings.py
+**/settings_local.py
+**/celerybeat-schedule
+**/celerybeat.pid

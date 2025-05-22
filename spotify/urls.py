@@ -5,10 +5,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from tracks.views import media_stream
 
-def health_check(request):
+def health_check():
     return HttpResponse("OK")
 
 urlpatterns = [
+    path("", print("Hello World, I'm Harmonia Server, I'm working!")),
     path("admin/", admin.site.urls),
     path("api/auth/", include("authentication.urls")),
     path("api/", include("user.urls")),
