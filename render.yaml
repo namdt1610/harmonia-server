@@ -17,32 +17,22 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: ALLOWED_HOSTS
-        value: ".onrender.com,localhost,127.0.0.1"
+        value: "spotify-django-backend.onrender.com,localhost,127.0.0.1"
       - key: DB_HOST
-        fromDatabase:
-          name: spotify-db
-          property: host
-      - key: DB_NAME
-        fromDatabase:
-          name: spotify-db
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: spotify-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: spotify-db
-          property: password
+        value: dpg-d0nhhbemcj7s73e10oo0-a
       - key: DB_PORT
-        fromDatabase:
-          name: spotify-db
-          property: port
+        value: 5432
+      - key: DB_NAME
+        value: harmonia_n6aa
+      - key: DB_USER
+        value: harmonia
+      - key: DB_PASSWORD
+        value: XNQEKZXJqwFoHVuFqQJcX1ndaVAhm8oc
       - key: WAIT_FOR_DB
         value: true
 
 databases:
-  - name: spotify-db
-    databaseName: sptf
-    user: postgres_sptf
+  - name: harmonia-database
+    databaseName: harmonia_n6aa
+    user: harmonia
     plan: free 
