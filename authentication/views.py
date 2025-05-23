@@ -14,6 +14,12 @@ from django.contrib.auth.models import User
 from django.conf import settings
 logger = logging.getLogger(__name__)
 
+def get_cookie_options():
+    if settings.DEBUG:
+        return {"samesite": "Lax", "secure": False}
+    else:
+        return {"samesite": "None", "secure": True}
+
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
@@ -60,14 +66,7 @@ class LoginView(APIView):
             "access": access_token,  # Return the token in the response too
         }, status=status.HTTP_200_OK)
         
-        # Set samesite and secure for cookies automatically
-        if settings.DEBUG:
-            samesite = "Lax"
-            secure = False
-        else:
-            samesite = "None"
-            secure = True   
-            
+        opts = get_cookie_options()
         # Set refresh token cookie
         response.set_cookie(
             key="refresh_token",
@@ -75,8 +74,7 @@ class LoginView(APIView):
             httponly=True,
             expires=refresh_expires,
             path="/",
-            samesite=samesite,
-            secure=secure,
+            **opts,
         )
         # Set access token cookie - EXACT name match with middleware
         response.set_cookie(
@@ -85,8 +83,7 @@ class LoginView(APIView):
             httponly=True,
             expires=access_expires,
             path="/",
-            samesite=samesite,
-            secure=secure,
+            **opts,
         )
         return response
 
@@ -133,13 +130,13 @@ class LogoutView(APIView):
             # Xóa cookies với các options bảo mật
             response = Response({"message": "Logout successfully!"}, status=status.HTTP_200_OK)
             
+            opts = get_cookie_options()
             # Xóa access token cookie
             response.delete_cookie(
                 "access_token",
                 path="/",
                 domain=None,
-                samesite="None",
-                secure=True,
+                **opts,
             )
             
             # Xóa refresh token cookie
@@ -147,8 +144,7 @@ class LogoutView(APIView):
                 "refresh_token",
                 path="/",
                 domain=None,
-                samesite="None",
-                secure=True,
+                **opts,
             )
             
             # Log logout action
@@ -213,6 +209,7 @@ class CustomTokenRefreshView(TokenRefreshView):
                 "access": new_access_token
             })
             
+            opts = get_cookie_options()
             # Set the access token cookie
             response.set_cookie(
                 key="access_token",
@@ -220,8 +217,7 @@ class CustomTokenRefreshView(TokenRefreshView):
                 httponly=True,
                 expires=access_expires,
                 path="/",
-                samesite="None",
-                secure=True,
+                **opts,
             )
             
             logger.debug(f"Token refresh successful")
