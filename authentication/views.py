@@ -16,9 +16,18 @@ logger = logging.getLogger(__name__)
 
 def get_cookie_options():
     if settings.DEBUG:
-        return {"samesite": "Lax", "secure": False}
+        return {
+            "samesite": "Lax",
+            "secure": False,
+            "path": "/",
+        }
     else:
-        return {"samesite": "None", "secure": True}
+        return {
+            "samesite": "None",
+            "secure": True,
+            "path": "/",
+            "domain": ".vercel.app"  # Allow cookies to be shared across subdomains
+        }
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
