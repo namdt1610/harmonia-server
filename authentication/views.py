@@ -19,14 +19,11 @@ def get_cookie_options():
         return {
             "samesite": "Lax",
             "secure": False,
-            "path": "/",
         }
     else:
         return {
             "samesite": "None",
             "secure": True,
-            "path": "/",
-            # "domain": ".vercel.app"  # Allow cookies to be shared across subdomains
         }
 
 class RegisterView(APIView):
