@@ -11,7 +11,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 import logging
 from .models import TokenBlacklist
 from django.contrib.auth.models import User
-
+from django.conf import settings
 logger = logging.getLogger(__name__)
 
 class RegisterView(APIView):
@@ -59,7 +59,15 @@ class LoginView(APIView):
             "user": user,
             "access": access_token,  # Return the token in the response too
         }, status=status.HTTP_200_OK)
-
+        
+        # Set samesite and secure for cookies automatically
+        if settings.DEBUG:
+            samesite = "Lax"
+            secure = False
+        else:
+            samesite = "None"
+            secure = True   
+            
         # Set refresh token cookie
         response.set_cookie(
             key="refresh_token",
@@ -67,8 +75,8 @@ class LoginView(APIView):
             httponly=True,
             expires=refresh_expires,
             path="/",
-            samesite="lax",
-            secure=False,
+            samesite=samesite,
+            secure=secure,
         )
         # Set access token cookie - EXACT name match with middleware
         response.set_cookie(
@@ -77,8 +85,8 @@ class LoginView(APIView):
             httponly=True,
             expires=access_expires,
             path="/",
-            samesite="lax",
-            secure=False,
+            samesite=samesite,
+            secure=secure,
         )
         return response
 
@@ -130,7 +138,8 @@ class LogoutView(APIView):
                 "access_token",
                 path="/",
                 domain=None,
-                samesite="lax"
+                samesite="None",
+                secure=True,
             )
             
             # Xóa refresh token cookie
@@ -138,7 +147,8 @@ class LogoutView(APIView):
                 "refresh_token",
                 path="/",
                 domain=None,
-                samesite="lax"
+                samesite="None",
+                secure=True,
             )
             
             # Log logout action
@@ -210,8 +220,8 @@ class CustomTokenRefreshView(TokenRefreshView):
                 httponly=True,
                 expires=access_expires,
                 path="/",
-                samesite="lax",
-                secure=False,
+                samesite="None",
+                secure=True,
             )
             
             logger.debug(f"Token refresh successful")
