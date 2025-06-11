@@ -14,12 +14,34 @@ from artists.serializers import ArtistSerializer
 from albums.serializers import AlbumSerializer
 from playlists.serializers import PlaylistSerializer
 import logging
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 
 logger = logging.getLogger(__name__)
 
 class SearchViewSet(viewsets.ViewSet):
+    swagger_tags = ['Search']
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    @swagger_auto_schema(
+        tags=['Search'],
+        operation_description="Perform a global search across tracks, artists, albums, and playlists",
+        responses={
+            200: openapi.Response(
+                description="Search results",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'tracks': TrackSerializer(many=True),
+                        'artists': ArtistSerializer(many=True),
+                        'albums': AlbumSerializer(many=True),
+                        'playlists': PlaylistSerializer(many=True)
+                    }
+                )
+            ),
+            401: "Unauthorized"
+        }
+    )
     @action(detail=False, methods=['get'])
     def global_search(self, request):
         query = request.query_params.get('q', '')
@@ -87,6 +109,14 @@ class SearchViewSet(viewsets.ViewSet):
 
         return Response(cached_results)
 
+    @swagger_auto_schema(
+        tags=['Search'],
+        operation_description="Get user's search history",
+        responses={
+            200: SearchHistorySerializer(many=True),
+            401: "Unauthorized"
+        }
+    )
     @action(detail=False, methods=['get'])
     def history(self, request):
         """Get user's search history"""
@@ -97,6 +127,20 @@ class SearchViewSet(viewsets.ViewSet):
         serializer = SearchHistorySerializer(history, many=True)
         return Response(serializer.data)
 
+    @swagger_auto_schema(
+        tags=['Search'],
+        operation_description="Get search suggestions based on popular searches",
+        responses={
+            200: openapi.Response(
+                description="List of search suggestions",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(type=openapi.TYPE_STRING)
+                )
+            ),
+            400: "Bad Request - Missing search query"
+        }
+    )
     @action(detail=False, methods=['get'])
     def suggestions(self, request):
         """Get search suggestions based on popular searches"""

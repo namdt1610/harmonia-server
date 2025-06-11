@@ -1,0 +1,213 @@
+{
+    "info": {
+        "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "name": "Harmonia API Test",
+        "description": "Collection for testing Harmonia API endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"test_user\",\n    \"password\": \"test_password\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/login/",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "auth", "login", ""]
+                        }
+                    }
+                },
+                {
+                    "name": "Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"new_user\",\n    \"email\": \"new_user@example.com\",\n    \"password\": \"new_password\",\n    \"password2\": \"new_password\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/register/",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "auth", "register", ""]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Tracks",
+            "item": [
+                {
+                    "name": "Get All Tracks",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/tracks/",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "tracks", ""]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Track",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"Test Track\",\n    \"description\": \"Test Description\",\n    \"genre\": \"Test Genre\",\n    \"bpm\": 120,\n    \"key\": \"C\",\n    \"price\": 9.99\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/tracks/",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "tracks", ""]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Track Detail",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/tracks/{{track_id}}/",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "tracks", "{{track_id}}", ""]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Media",
+            "item": [
+                {
+                    "name": "Upload Track Audio",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "track",
+                                    "type": "file",
+                                    "src": "/path/to/audio/file.mp3"
+                                },
+                                {
+                                    "key": "track_id",
+                                    "value": "{{track_id}}"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/media/upload/",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "media", "upload", ""]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Track Audio",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/media/track/{{track_id}}/",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "media",
+                                "track",
+                                "{{track_id}}",
+                                ""
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [""]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [""]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000",
+            "type": "string"
+        },
+        {
+            "key": "access_token",
+            "value": "your_access_token_here",
+            "type": "string"
+        },
+        {
+            "key": "track_id",
+            "value": "track_id_here",
+            "type": "string"
+        }
+    ]
+}

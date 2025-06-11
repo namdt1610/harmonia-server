@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Queue, QueueTrack
-from music.serializers import TrackSerializer
+from tracks.serializers import TrackSerializer
 
 class QueueTrackSerializer(serializers.ModelSerializer):
     track = TrackSerializer(read_only=True)

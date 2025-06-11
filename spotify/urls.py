@@ -1,10 +1,27 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.http import HttpResponse
 from django.conf import settings
 from django.conf.urls.static import static
-from tracks.views import media_stream
+from tracks.views import TrackViewSet
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
 
+# === Swagger Configuration ===
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Harmonia API",
+        default_version='v1',
+        description="API documentation for Harmonia Music Platform",
+        terms_of_service="https://www.google.com/policies/terms/",
+        contact=openapi.Contact(email="contact@harmonia.com"),
+        license=openapi.License(name="BSD License"),
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+    url='http://127.0.0.1:8000',
+)
 
 # === Basic Health Check & Homepage ===
 def health_check(_):  # clean: request không xài
@@ -15,6 +32,11 @@ def home(_):  # clean: request không xài
 
 
 urlpatterns = [
+    # Swagger URLs
+    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+
     # Home + Health
     path("", home),
     path("api/health/", health_check),
@@ -29,7 +51,6 @@ urlpatterns = [
     # Feature APIs
     path("api/", include("user.urls")),
     path("api/", include("favorites.urls")),
-    path("api/", include("music.urls")),
     path("api/", include("playlists.urls")),
     path("api/", include("tracks.urls")),
     path("api/", include("albums.urls")),
@@ -41,7 +62,7 @@ urlpatterns = [
     path("api/chat/", include("chatbot.urls")),
 
     # Media (Custom stream handler)
-    path("media/<path:path>", media_stream, name="media_stream"),
+    path("media/<path:path>", TrackViewSet.as_view({'get': 'media_stream'}), name="media_stream"),
 ]
 
 # === Static files in DEBUG ===

@@ -1,31 +1,170 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from django.db.models import Count, Sum, Avg
-from rest_framework.permissions import IsAdminUser
-from user.serializers import UserSerializer
-from music.models import Track, Album, Artist, Playlist
+from user.serializers import ProfileUserSerializer
+from tracks.models import Track
+from albums.models import Album
+from artists.models import Artist
+from playlists.models import Playlist
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
 from user_activity.models import UserActivity
 from search.models import SearchHistory
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from permissions.permissions import HasCustomPermission, has_permission
+from rest_framework.permissions import IsAuthenticated
 
 User = get_user_model()
 
 # Create your views here.
 
 class AdminUserViewSet(viewsets.ModelViewSet):
-    """ViewSet for admin to manage users"""
+    """
+    Admin ViewSet for managing users.
+    Provides comprehensive user management functionality for administrators.
+    """
+    swagger_tags = ['Admin']
     queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
+    serializer_class = ProfileUserSerializer
+    permission_classes = [IsAuthenticated, HasCustomPermission]
+
+    @property
+    def required_permission(self):
+        mapping = {
+            'create': 'add_user',
+            'update': 'edit_user',
+            'partial_update': 'edit_user',
+            'destroy': 'delete_user',
+            'list': 'view_user',
+            'retrieve': 'view_user',
+        }
+        return mapping.get(self.action)
+
+    @swagger_auto_schema(
+        tags=['Admin'],
+        operation_description="Get a list of all users",
+        responses={
+            200: ProfileUserSerializer(many=True),
+            401: "Unauthorized",
+            403: "Forbidden - Admin access required"
+        }
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        tags=['Admin'],
+        operation_description="Create a new user",
+        request_body=ProfileUserSerializer(),
+        responses={
+            201: ProfileUserSerializer(),
+            400: "Bad Request",
+            401: "Unauthorized",
+            403: "Forbidden - Admin access required"
+        }
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        tags=['Admin'],
+        operation_description="Get a specific user by ID",
+        responses={
+            200: ProfileUserSerializer(),
+            404: "Not Found",
+            401: "Unauthorized",
+            403: "Forbidden - Admin access required"
+        }
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        tags=['Admin'],
+        operation_description="Update a user",
+        request_body=ProfileUserSerializer(),
+        responses={
+            200: ProfileUserSerializer(),
+            400: "Bad Request",
+            401: "Unauthorized",
+            403: "Forbidden - Admin access required",
+            404: "Not Found"
+        }
+    )
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Only allow updating role
+        role = request.data.get('role')
+        if role is not None:
+            instance.role = role
+            instance.save(update_fields=['role'])
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        return Response({'error': 'Only role can be updated'}, status=400)
+
+    @swagger_auto_schema(
+        tags=['Admin'],
+        operation_description="Partially update a user",
+        request_body=ProfileUserSerializer(),
+        responses={
+            200: ProfileUserSerializer(),
+            400: "Bad Request",
+            401: "Unauthorized",
+            403: "Forbidden - Admin access required",
+            404: "Not Found"
+        }
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        tags=['Admin'],
+        operation_description="Delete a user",
+        responses={
+            204: "No Content",
+            401: "Unauthorized",
+            403: "Forbidden - Admin access required",
+            404: "Not Found"
+        }
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
+
+@swagger_auto_schema(
+    method='get',
+    tags=['Admin'],
+    operation_description="Get overview analytics data for admin dashboard",
+    responses={
+        200: openapi.Response(
+            description="Analytics overview data",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'totalUsers': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'totalTracks': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'totalAlbums': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'totalPlaylists': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'totalArtists': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'newUsersLastMonth': openapi.Schema(type=openapi.TYPE_INTEGER)
+                }
+            )
+        ),
+        401: "Unauthorized",
+        403: "Forbidden - Admin access required"
+    }
+)
 
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([permissions.IsAuthenticated, HasCustomPermission])
 def analytics_overview(request):
     """Get overview analytics data for admin dashboard"""
+    if not has_permission(request.user, 'view_analytics'):
+        return Response({"error": "Permission denied"}, status=403)
+        
     total_users = User.objects.count()
     total_tracks = Track.objects.count()
     total_albums = Album.objects.count()
@@ -45,10 +184,33 @@ def analytics_overview(request):
         'newUsersLastMonth': new_users_last_month
     })
 
+@swagger_auto_schema(
+    method='get',
+    tags=['Admin'],
+    operation_description="Get detailed user analytics",
+    responses={
+        200: openapi.Response(
+            description="User analytics data",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'userGrowth': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                    'activeUsers': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'activityTypes': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT))
+                }
+            )
+        ),
+        401: "Unauthorized",
+        403: "Forbidden - Admin access required"
+    }
+)
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([permissions.IsAuthenticated, HasCustomPermission])
 def user_analytics(request):
     """Get detailed user analytics"""
+    if not has_permission(request.user, 'view_analytics'):
+        return Response({"error": "Permission denied"}, status=403)
+        
     # User growth over time
     thirty_days_ago = timezone.now() - timedelta(days=30)
     user_growth = User.objects.filter(
@@ -74,10 +236,34 @@ def user_analytics(request):
         'activityTypes': list(activity_types)
     })
 
+@swagger_auto_schema(
+    method='get',
+    tags=['Admin'],
+    operation_description="Get content-related analytics",
+    responses={
+        200: openapi.Response(
+            description="Content analytics data",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'topTracks': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                    'topDownloads': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                    'topArtists': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                    'topAlbums': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT))
+                }
+            )
+        ),
+        401: "Unauthorized",
+        403: "Forbidden - Admin access required"
+    }
+)
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([permissions.IsAuthenticated, HasCustomPermission])
 def content_analytics(request):
     """Get content-related analytics"""
+    if not has_permission(request.user, 'view_analytics'):
+        return Response({"error": "Permission denied"}, status=403)
+        
     # Most played tracks
     top_tracks = Track.objects.annotate(
         total_plays=Sum('play_count')
@@ -136,10 +322,33 @@ def content_analytics(request):
         ]
     })
 
+@swagger_auto_schema(
+    method='get',
+    tags=['Admin'],
+    operation_description="Get search-related analytics",
+    responses={
+        200: openapi.Response(
+            description="Search analytics data",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'topSearches': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                    'searchTrends': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                    'averageResults': openapi.Schema(type=openapi.TYPE_NUMBER)
+                }
+            )
+        ),
+        401: "Unauthorized",
+        403: "Forbidden - Admin access required"
+    }
+)
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([permissions.IsAuthenticated, HasCustomPermission])
 def search_analytics(request):
     """Get search-related analytics"""
+    if not has_permission(request.user, 'view_analytics'):
+        return Response({"error": "Permission denied"}, status=403)
+        
     # Most common search terms
     top_searches = SearchHistory.objects.values('query').annotate(
         count=Count('id')
@@ -164,10 +373,33 @@ def search_analytics(request):
         'averageResults': avg_results['avg_results']
     })
 
+@swagger_auto_schema(
+    method='get',
+    tags=['Admin'],
+    operation_description="Get detailed activity analytics",
+    responses={
+        200: openapi.Response(
+            description="Activity analytics data",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'activityTrends': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                    'activityByType': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                    'peakHours': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT))
+                }
+            )
+        ),
+        401: "Unauthorized",
+        403: "Forbidden - Admin access required"
+    }
+)
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([permissions.IsAuthenticated, HasCustomPermission])
 def activity_analytics(request):
     """Get detailed activity analytics"""
+    if not has_permission(request.user, 'view_analytics'):
+        return Response({"error": "Permission denied"}, status=403)
+        
     # Activity over time
     thirty_days_ago = timezone.now() - timedelta(days=30)
     activity_trends = UserActivity.objects.filter(

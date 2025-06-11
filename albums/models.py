@@ -6,6 +6,7 @@ class Album(models.Model):
     artist = models.ForeignKey(Artist, on_delete=models.CASCADE, related_name="albums")
     release_date = models.DateField(default=None, blank=True, null=True)
     cover = models.ImageField(upload_to="cover_img/album/", blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
 
     class Meta:
         ordering = ["-release_date"]

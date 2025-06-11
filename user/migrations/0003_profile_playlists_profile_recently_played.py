@@ -7,19 +7,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0012_track_music_video'),
         ('user', '0002_profile_favorite_albums_profile_favorite_artists_and_more'),
+        ('tracks', '0001_initial'),
+        ('playlists', '0001_initial'),
     ]
 
     operations = [
         migrations.AddField(
             model_name='profile',
             name='playlists',
-            field=models.ManyToManyField(blank=True, related_name='users', to='music.playlist'),
+            field=models.ManyToManyField(blank=True, related_name='users', to='playlists.playlist'),
         ),
         migrations.AddField(
             model_name='profile',
             name='recently_played',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='current_listeners', to='music.track'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='current_listeners', to='tracks.track'),
         ),
     ]

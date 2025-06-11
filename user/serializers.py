@@ -7,7 +7,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ['avatar', 'bio', 'created_at']
 
-class UserSerializer(serializers.ModelSerializer):
+class ProfileUserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
 
     class Meta:

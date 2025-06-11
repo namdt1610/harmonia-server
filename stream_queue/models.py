@@ -1,6 +1,9 @@
 from django.db import models
+from tracks.models import Track
+from django.contrib.auth import get_user_model
 from django.conf import settings
-from music.models import Track
+
+User = get_user_model()
 
 class Queue(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='queues')

@@ -55,11 +55,11 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'storages',
     'corsheaders',
+    'drf_yasg',  # Add Swagger documentation
     
     # App của bạn
     'authentication',
     'user',  
-    'music',
     'chatbot',
     'playlists',
     'favorites',
@@ -70,7 +70,8 @@ INSTALLED_APPS = [
     'stream_queue',
     'user_activity',
     'admin_api',
-    'search'
+    'search',
+    'permissions',  # Add permissions app
 ]
 
 SITE_ID = 1  # Cần thiết cho django-allauth
@@ -284,15 +285,47 @@ if 'test' in sys.argv:
     }
 
 # Cấu hình local media files
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR,'media')
 
-# Chỉ sử dụng S3 trong production
-if ENVIRONMENT == "production":
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-else:
-    # Sử dụng file system storage cho development
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+# Media Storage Settings
+MEDIA_STORAGE = {
+    'CONTENT': {
+        'AUDIO': {
+            'ORIGINAL': 'content/audio/original/',
+            'PROCESSED': 'content/audio/processed/',
+            'THUMBNAIL': 'content/audio/thumbnail/',
+        },
+        'VIDEO': {
+            'ORIGINAL': 'content/video/original/',
+            'PROCESSED': 'content/video/processed/',
+            'THUMBNAIL': 'content/video/thumbnail/',
+        },
+        'IMAGE': {
+            'ORIGINAL': 'content/image/original/',
+            'PROCESSED': 'content/image/processed/',
+            'THUMBNAIL': 'content/image/thumbnail/',
+        },
+    },
+    'ASSETS': {
+        'BRANDING': 'assets/branding/',
+        'ICONS': 'assets/icons/',
+        'TEMPLATES': 'assets/templates/',
+    },
+    'BACKUPS': {
+        'DAILY': 'backups/daily/',
+        'WEEKLY': 'backups/weekly/',
+        'MONTHLY': 'backups/monthly/',
+    },
+    'VERSIONS': {
+        'V1': 'versions/v1/',
+        'V2': 'versions/v2/',
+    },
+}
+
+# Environment-specific media paths
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+MEDIA_ENV_PATH = os.path.join(MEDIA_ROOT, ENVIRONMENT)
 
 # Logging configuration
 LOGGING = {
@@ -321,18 +354,38 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        'drf_yasg': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
         'authentication': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
         },
-        'music': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+        
     },
 }
 
 # URL Settings
 APPEND_SLASH = True
+
+# Swagger Settings
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
+    'USE_SESSION_AUTH': False,
+    'JSON_EDITOR': True,
+    'SUPPORTED_SUBMIT_METHODS': [
+        'get',
+        'post',
+        'put',
+        'patch',
+        'delete',
+    ],
+}

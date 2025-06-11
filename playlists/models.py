@@ -9,6 +9,7 @@ class Playlist(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_public = models.BooleanField(default=True)
     followers = models.PositiveIntegerField(default=0)
+    description = models.TextField(blank=True, null=True)
 
     class Meta:
         ordering = ["-created_at"]

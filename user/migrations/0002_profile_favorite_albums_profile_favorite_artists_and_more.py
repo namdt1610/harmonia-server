@@ -6,24 +6,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0009_alter_album_options_alter_artist_options_and_more'),
         ('user', '0001_initial'),
+        ('tracks', '0001_initial'),
+        ('albums', '0001_initial'),
+        ('artists', '0001_initial'),
     ]
 
     operations = [
         migrations.AddField(
             model_name='profile',
             name='favorite_albums',
-            field=models.ManyToManyField(blank=True, related_name='favorited_by', to='music.album'),
+            field=models.ManyToManyField(blank=True, related_name='favorited_by', to='albums.album'),
         ),
         migrations.AddField(
             model_name='profile',
             name='favorite_artists',
-            field=models.ManyToManyField(blank=True, related_name='favorited_by', to='music.artist'),
+            field=models.ManyToManyField(blank=True, related_name='favorited_by', to='artists.artist'),
         ),
         migrations.AddField(
             model_name='profile',
             name='favorite_tracks',
-            field=models.ManyToManyField(blank=True, related_name='favorited_by', to='music.track'),
+            field=models.ManyToManyField(blank=True, related_name='favorited_by', to='tracks.track'),
         ),
     ]

@@ -6,30 +6,86 @@ from genres.models import Genre
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC
 from django.core.files.base import ContentFile
+from django.conf import settings
+import os
 
 def validate_audio_file(file):
-    """ Giới hạn dung lượng file audio tối đa là 50MB """
+    """Validate audio file size (max 50MB)"""
     max_size = 50 * 1024 * 1024  # 50MB
     if file.size > max_size:
         raise ValidationError("File must be less than 50MB.")
 
+def get_audio_upload_path(instance, filename):
+    """Get upload path for audio files"""
+    return os.path.join(
+        settings.MEDIA_STORAGE['CONTENT']['AUDIO']['ORIGINAL'],
+        f"{instance.artist.id}/{instance.id}_{filename}"
+    )
+
+def get_video_upload_path(instance, filename):
+    """Get upload path for video files"""
+    return os.path.join(
+        settings.MEDIA_STORAGE['CONTENT']['VIDEO']['ORIGINAL'],
+        f"{instance.artist.id}/{instance.id}_{filename}"
+    )
+
+def get_track_thumbnail_path(instance, filename):
+    """Get upload path for track thumbnails"""
+    return os.path.join(
+        settings.MEDIA_STORAGE['CONTENT']['IMAGE']['THUMBNAIL'],
+        f"{instance.artist.id}/{instance.id}_{filename}"
+    )
+
+def get_video_thumbnail_path(instance, filename):
+    """Get upload path for video thumbnails"""
+    return os.path.join(
+        settings.MEDIA_STORAGE['CONTENT']['VIDEO']['THUMBNAIL'],
+        f"{instance.artist.id}/{instance.id}_{filename}"
+    )
+
 class Track(models.Model):
+    # Core fields
     title = models.CharField(max_length=255, db_index=True)
     album = models.ForeignKey(Album, on_delete=models.SET_NULL, null=True, blank=True, related_name="tracks")
     artist = models.ForeignKey(Artist, on_delete=models.CASCADE, related_name="tracks")
-    file = models.FileField(upload_to="tracks/", validators=[validate_audio_file], max_length=500)
-    video = models.FileField(upload_to='videos/', null=True, blank=True)
+    
+    # Media fields
+    file = models.FileField(
+        upload_to=get_audio_upload_path,
+        validators=[validate_audio_file],
+        max_length=500
+    )
+    video = models.FileField(
+        upload_to=get_video_upload_path,
+        null=True,
+        blank=True
+    )
+    track_thumbnail = models.ImageField(
+        upload_to=get_track_thumbnail_path,
+        blank=True,
+        null=True
+    )
+    video_thumbnail = models.ImageField(
+        upload_to=get_video_thumbnail_path,
+        blank=True,
+        null=True
+    )
+    
+    # Metadata fields
     duration = models.PositiveIntegerField(help_text="Duration in seconds", null=True, blank=True)
     genres = models.ManyToManyField(Genre, related_name="tracks", blank=True)
     lyrics = models.TextField(blank=True, null=True)
+    
+    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Analytics fields
     play_count = models.PositiveIntegerField(default=0)
     download_count = models.PositiveIntegerField(default=0)
     is_downloadable = models.BooleanField(default=True)
-    track_thumbnail = models.ImageField(upload_to="track_thumbnails/", blank=True, null=True)
-    video_thumbnail = models.ImageField(upload_to="video_thumbnails/", blank=True, null=True)
-
+    
+    # Meta giúp index và sắp xếp để tăng hiệu suất truy vấn
     class Meta:
         indexes = [
             models.Index(fields=["title"]),
@@ -45,7 +101,7 @@ class Track(models.Model):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
-        # Tự động lấy cover nếu chưa có thumbnail và có file audio
+        # Extract cover art if no thumbnail exists
         if self.file and not self.track_thumbnail:
             try:
                 audio = MP3(self.file.path, ID3=ID3)
@@ -59,7 +115,7 @@ class Track(models.Model):
                         )
                         break
             except Exception as e:
-                print(f"Không thể lấy cover từ file audio: {e}")
+                print(f"Could not extract cover from audio file: {e}")
 
     def __str__(self):
         return f"{self.title} - {self.artist.name}"

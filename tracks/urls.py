@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import TrackViewSet
 
 router = DefaultRouter()
-router.register(r'tracks', TrackViewSet)
+router.register(r'tracks', TrackViewSet, basename='track')
 
 urlpatterns = [
     path('', include(router.urls)),
