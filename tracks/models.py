@@ -1,12 +1,12 @@
-from django.db import models
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
+from mutagen.id3 import ID3, APIC
 from artists.models import Artist
 from albums.models import Album
 from genres.models import Genre
+from django.db import models
 from mutagen.mp3 import MP3
-from mutagen.id3 import ID3, APIC
-from django.core.files.base import ContentFile
-from django.conf import settings
 import os
 
 def validate_audio_file(file):

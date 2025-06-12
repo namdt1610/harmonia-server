@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from django_ratelimit.decorators import ratelimit
-from .serializers import RegisterSerializer, LoginSerializer, AuthUserSerializer
+from .serializers import RegisterSerializer, LoginSerializer, AuthUserSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
 from django.utils.decorators import method_decorator
 from datetime import datetime, timezone, timedelta
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
@@ -16,6 +16,7 @@ from rest_framework.decorators import api_view, permission_classes
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .services import AuthService, EmailService
 
 logger = logging.getLogger(__name__)
 
@@ -30,60 +31,6 @@ def get_cookie_options():
             "samesite": "None",
             "secure": True,
         }
-
-@swagger_auto_schema(
-    method='post',
-    operation_description="Register a new user",
-    request_body=RegisterSerializer(),
-    responses={
-        201: AuthUserSerializer(),
-        400: "Bad Request"
-    }
-)
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def register(request):
-    serializer = RegisterSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@swagger_auto_schema(
-    method='post',
-    operation_description="Login and get access token",
-    request_body=LoginSerializer(),
-    responses={
-        200: openapi.Response(
-            description="Successful login",
-            schema=openapi.Schema(
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    'user': openapi.Schema(
-                        type=openapi.TYPE_OBJECT,
-                        properties={
-                            'id': openapi.Schema(type=openapi.TYPE_INTEGER),
-                            'username': openapi.Schema(type=openapi.TYPE_STRING),
-                            'email': openapi.Schema(type=openapi.TYPE_STRING),
-                            'is_superuser': openapi.Schema(type=openapi.TYPE_BOOLEAN)
-                        }
-                    ),
-                    'access': openapi.Schema(type=openapi.TYPE_STRING),
-                    'refresh': openapi.Schema(type=openapi.TYPE_STRING)
-                }
-            )
-        ),
-        400: "Bad Request",
-        401: "Invalid credentials"
-    }
-)
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def login(request):
-    serializer = LoginSerializer(data=request.data)
-    if serializer.is_valid():
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class RegisterView(APIView):
     """
@@ -105,8 +52,16 @@ class RegisterView(APIView):
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # Use service to create user with welcome email
+            user = AuthService.create_user_with_welcome_email(
+                username=serializer.validated_data['username'],
+                email=serializer.validated_data['email'],
+                password=serializer.validated_data['password']
+            )
+            
+            # Return user data
+            user_serializer = AuthUserSerializer(user)
+            return Response(user_serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(TokenObtainPairView):
@@ -283,6 +238,70 @@ class LogoutView(APIView):
             return response
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class ForgotPasswordView(APIView):
+    """
+    API endpoint for user forgot password.
+    """
+    swagger_tags = ['Authentication']
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        tags=['Authentication'],
+        operation_description="Forgot password",
+        request_body=ForgotPasswordSerializer(),
+        responses={
+            200: openapi.Response(
+                description="Email sent successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING)
+                    }
+                )
+            ),
+            400: "Bad Request"
+        }
+    )
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            # Use service to handle password reset
+            AuthService.handle_password_reset_request(email)
+            return Response({"message": "Email sent successfully!"}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ResetPasswordView(APIView):
+    """
+    API endpoint for password reset.
+    """
+    swagger_tags = ['Authentication']
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        tags=['Authentication'],
+        operation_description="Reset password with token",
+        request_body=ResetPasswordSerializer(),
+        responses={
+            200: openapi.Response(
+                description="Password reset successful",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING)
+                    }
+                )
+            ),
+            400: "Bad Request - Invalid token or passwords don't match"
+        }
+    )
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Password reset successfully!"}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class MeView(APIView):
     """

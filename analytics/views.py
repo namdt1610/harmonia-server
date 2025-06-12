@@ -10,7 +10,16 @@ from albums.models import Album
 from playlists.models import Playlist
 from user.models import User
 from user_activity.models import PlayHistory
+from drf_yasg.utils import swagger_auto_schema
 
+@swagger_auto_schema(
+    method='get',
+    tags=['Analytics'],
+    operation_description="Get overview statistics for the admin dashboard",
+    responses={
+        200: "OK"
+    }
+)
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def get_overview(request):
@@ -31,6 +40,14 @@ def get_overview(request):
         'totalPlays': total_plays
     })
 
+@swagger_auto_schema(
+    method='get',
+    tags=['Analytics'],
+    operation_description="Get detailed dashboard statistics",
+    responses={
+        200: "OK"
+    }
+)
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def get_dashboard_stats(request):
@@ -62,6 +79,14 @@ def get_dashboard_stats(request):
         'topPlaylists': list(top_playlists)
     })
 
+@swagger_auto_schema(
+    method='get',
+    tags=['Analytics'],
+    operation_description="Get play statistics for a given period",
+    responses={
+        200: "OK"
+    }
+)
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def get_play_stats(request):
@@ -92,6 +117,14 @@ def get_play_stats(request):
 
     return Response(list(plays))
 
+@swagger_auto_schema(
+    method='get',
+    tags=['Analytics'],
+    operation_description="Get user statistics for a given period",
+    responses={
+        200: "OK"
+    }
+)
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def get_user_stats(request):

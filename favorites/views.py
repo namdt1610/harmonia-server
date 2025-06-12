@@ -128,6 +128,17 @@ class FavoriteViewSet(viewsets.ModelViewSet):
 
     @swagger_auto_schema(
         tags=['Favorites'],
+        operation_description="Update one's list of all favorites",
+        responses={
+            200: FavoriteSerializer(many=True),
+            401: "Unauthorized"
+        }
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+    
+    @swagger_auto_schema(
+        tags=['Favorites'],
         operation_description="Get user's favorite tracks",
         responses={
             200: TrackSerializer(many=True),

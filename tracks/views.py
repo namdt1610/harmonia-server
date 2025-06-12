@@ -257,6 +257,20 @@ class TrackViewSet(viewsets.ModelViewSet):
 
     @swagger_auto_schema(
         tags=['Tracks'],
+        operation_description="Update a track partially",
+        request_body=TrackSerializer(),
+        responses={
+            200: TrackSerializer(),
+            400: "Bad Request",
+            401: "Unauthorized",
+            404: "Not Found"
+        }
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        tags=['Tracks'],
         operation_description="Update a track",
         request_body=TrackSerializer(),
         responses={

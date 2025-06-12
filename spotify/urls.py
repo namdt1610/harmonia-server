@@ -57,9 +57,10 @@ urlpatterns = [
     path("api/", include("artists.urls")),
     path("api/", include("genres.urls")),
     path("api/", include("user_activity.urls")),
-    path("api/", include("analytics.urls")),
+    path("api/analytics/", include("analytics.urls")),
     path("api/", include("stream_queue.urls")),
     path("api/chat/", include("chatbot.urls")),
+    path("api/subscriptions/", include("subscription_plans.urls")),
 
     # Media (Custom stream handler)
     path("media/<path:path>", TrackViewSet.as_view({'get': 'media_stream'}), name="media_stream"),

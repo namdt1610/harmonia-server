@@ -1,8 +1,12 @@
-from rest_framework import serializers
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate
-import logging
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from rest_framework import serializers
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
+import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -81,4 +85,47 @@ class LoginSerializer(serializers.Serializer):
             "refresh": refresh_token
         }
     
-        
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        if not User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email does not exist")
+        return value
+
+class ResetPasswordSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(min_length=6, write_only=True)
+    confirm_password = serializers.CharField(min_length=6, write_only=True)
+
+    def validate(self, data):
+        uid = data.get('uid')
+        token = data.get('token')
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+
+        # Check if passwords match
+        if new_password != confirm_password:
+            raise serializers.ValidationError("Passwords do not match")
+
+        # Verify token and get user
+        try:
+            user_id = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=user_id)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            raise serializers.ValidationError("Invalid reset link")
+
+        # Check if token is valid
+        if not default_token_generator.check_token(user, token):
+            raise serializers.ValidationError("Invalid or expired reset link")
+
+        data['user'] = user
+        return data
+
+    def save(self):
+        user = self.validated_data['user']
+        new_password = self.validated_data['new_password']
+        user.set_password(new_password)
+        user.save()
+        return user

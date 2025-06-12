@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from django.db.models import Count, Sum, Avg
-from user.serializers import ProfileUserSerializer
+from user.serializers import ProfileSerializer
 from tracks.models import Track
 from albums.models import Album
 from artists.models import Artist
@@ -29,7 +29,7 @@ class AdminUserViewSet(viewsets.ModelViewSet):
     """
     swagger_tags = ['Admin']
     queryset = User.objects.all()
-    serializer_class = ProfileUserSerializer
+    serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated, HasCustomPermission]
 
     @property
@@ -48,7 +48,7 @@ class AdminUserViewSet(viewsets.ModelViewSet):
         tags=['Admin'],
         operation_description="Get a list of all users",
         responses={
-            200: ProfileUserSerializer(many=True),
+            200: ProfileSerializer(many=True),
             401: "Unauthorized",
             403: "Forbidden - Admin access required"
         }
@@ -59,9 +59,9 @@ class AdminUserViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         tags=['Admin'],
         operation_description="Create a new user",
-        request_body=ProfileUserSerializer(),
+        request_body=ProfileSerializer(),
         responses={
-            201: ProfileUserSerializer(),
+            201: ProfileSerializer(),
             400: "Bad Request",
             401: "Unauthorized",
             403: "Forbidden - Admin access required"
@@ -74,7 +74,7 @@ class AdminUserViewSet(viewsets.ModelViewSet):
         tags=['Admin'],
         operation_description="Get a specific user by ID",
         responses={
-            200: ProfileUserSerializer(),
+            200: ProfileSerializer(),
             404: "Not Found",
             401: "Unauthorized",
             403: "Forbidden - Admin access required"
@@ -86,9 +86,9 @@ class AdminUserViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         tags=['Admin'],
         operation_description="Update a user",
-        request_body=ProfileUserSerializer(),
+        request_body=ProfileSerializer(),
         responses={
-            200: ProfileUserSerializer(),
+            200: ProfileSerializer(),
             400: "Bad Request",
             401: "Unauthorized",
             403: "Forbidden - Admin access required",
@@ -109,9 +109,9 @@ class AdminUserViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         tags=['Admin'],
         operation_description="Partially update a user",
-        request_body=ProfileUserSerializer(),
+        request_body=ProfileSerializer(),
         responses={
-            200: ProfileUserSerializer(),
+            200: ProfileSerializer(),
             400: "Bad Request",
             401: "Unauthorized",
             403: "Forbidden - Admin access required",

@@ -11,7 +11,6 @@ class Profile(models.Model):
       favorite_tracks = models.ManyToManyField('tracks.Track', blank=True, related_name='favorited_by_profiles')
       favorite_artists = models.ManyToManyField('artists.Artist', blank=True, related_name='favorited_by_profiles')
       favorite_albums = models.ManyToManyField('albums.Album', blank=True, related_name='favorited_by_profiles')
-      created_at = models.DateTimeField(auto_now_add=True)
 
       def __str__(self):
           return self.user.username

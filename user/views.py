@@ -1,7 +1,8 @@
 from rest_framework import viewsets, permissions
+from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
 from .models import Profile
-from .serializers import ProfileUserSerializer, ProfileSerializer
+from .serializers import ProfileSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from permissions.permissions import HasCustomPermission
@@ -15,8 +16,8 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     swagger_tags = ['Users']
     queryset = User.objects.all()
-    serializer_class = ProfileUserSerializer
-    permission_classes = [permissions.IsAuthenticated, HasCustomPermission]
+    serializer_class = ProfileSerializer
+    permission_classes = [IsAuthenticated, HasCustomPermission]
 
     @property
     def required_permission(self):
@@ -34,7 +35,7 @@ class UserViewSet(viewsets.ModelViewSet):
         tags=['Users'],
         operation_description="Get a list of all users",
         responses={
-            200: ProfileUserSerializer(many=True),
+            200: ProfileSerializer(many=True),
             401: "Unauthorized"
         }
     )
@@ -44,9 +45,9 @@ class UserViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         tags=['Users'],
         operation_description="Create a new user",
-        request_body=ProfileUserSerializer(),
+        request_body=ProfileSerializer(),
         responses={
-            201: ProfileUserSerializer(),
+            201: ProfileSerializer(),
             400: "Bad Request",
             401: "Unauthorized"
         }
@@ -58,7 +59,7 @@ class UserViewSet(viewsets.ModelViewSet):
         tags=['Users'],
         operation_description="Get a specific user by ID",
         responses={
-            200: ProfileUserSerializer(),
+            200: ProfileSerializer(),
             404: "Not Found",
             401: "Unauthorized"
         }
@@ -71,28 +72,14 @@ class UserViewSet(viewsets.ModelViewSet):
         operation_description="Update a user",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
-            properties={
-                'username': openapi.Schema(type=openapi.TYPE_STRING),
-                'email': openapi.Schema(type=openapi.TYPE_STRING, format='email'),
-                'first_name': openapi.Schema(type=openapi.TYPE_STRING),
-                'last_name': openapi.Schema(type=openapi.TYPE_STRING),
-                'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN)
-            }
+            properties=ProfileSerializer()
         ),
         responses={
             200: openapi.Response(
                 description="User updated successfully",
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
-                    properties={
-                        'id': openapi.Schema(type=openapi.TYPE_INTEGER),
-                        'username': openapi.Schema(type=openapi.TYPE_STRING),
-                        'email': openapi.Schema(type=openapi.TYPE_STRING),
-                        'first_name': openapi.Schema(type=openapi.TYPE_STRING),
-                        'last_name': openapi.Schema(type=openapi.TYPE_STRING),
-                        'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                        'date_joined': openapi.Schema(type=openapi.TYPE_STRING, format='date-time')
-                    }
+                    properties=ProfileSerializer()
                 )
             ),
             400: "Bad Request",
@@ -120,28 +107,14 @@ class UserViewSet(viewsets.ModelViewSet):
         operation_description="Partially update a user",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
-            properties={
-                'username': openapi.Schema(type=openapi.TYPE_STRING),
-                'email': openapi.Schema(type=openapi.TYPE_STRING, format='email'),
-                'first_name': openapi.Schema(type=openapi.TYPE_STRING),
-                'last_name': openapi.Schema(type=openapi.TYPE_STRING),
-                'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN)
-            }
+            properties=ProfileSerializer()
         ),
         responses={
             200: openapi.Response(
                 description="User partially updated successfully",
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
-                    properties={
-                        'id': openapi.Schema(type=openapi.TYPE_INTEGER),
-                        'username': openapi.Schema(type=openapi.TYPE_STRING),
-                        'email': openapi.Schema(type=openapi.TYPE_STRING),
-                        'first_name': openapi.Schema(type=openapi.TYPE_STRING),
-                        'last_name': openapi.Schema(type=openapi.TYPE_STRING),
-                        'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                        'date_joined': openapi.Schema(type=openapi.TYPE_STRING, format='date-time')
-                    }
+                    properties=ProfileSerializer()
                 )
             ),
             400: "Bad Request",

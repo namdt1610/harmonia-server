@@ -5,11 +5,4 @@ from .models import Profile
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ['avatar', 'bio', 'created_at']
-
-class ProfileUserSerializer(serializers.ModelSerializer):
-    profile = ProfileSerializer()
-
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'email', 'is_superuser', 'profile']
+        fields = '__all__'
