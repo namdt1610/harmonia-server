@@ -3,7 +3,7 @@ from user_activity.models import UserActivity, PlayHistory
 from .models import Track
 from django.db.models import F
 from django.conf import settings
-from django.http import Http404
+from django.http import Http404, HttpResponse
 import os
 import re
 import mimetypes
@@ -128,6 +128,20 @@ class TrackFileService:
         end = min(end, file_size - 1)
         
         return (start, end), file_size
+
+    """
+    Tạo ra một HTTP response cho yêu cầu range request (yêu cầu một phần của file).
+    """
+    @staticmethod
+    def create_partial_content_response(file_path, start, end, file_size, content_type):
+        with open(file_path, 'rb') as f:
+            f.seek(start)
+            data = f.read(end - start + 1)
+        response = HttpResponse(data, status=206, content_type=content_type)
+        response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
+        response['Content-Length'] = str(end - start + 1)
+        response['Accept-Ranges'] = 'bytes'
+        return response
 
     @staticmethod
     def stream_media_file(request, path):

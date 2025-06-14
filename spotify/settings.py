@@ -25,9 +25,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-+43+y-!@8$x=n0x*dcg^89jou0^_)u7jrb@1$uiuzix1fote2j'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG")
-
 ALLOWED_HOSTS = ["*"]
 
 # AUTH_USER_MODEL = 'authentication.User'
@@ -176,7 +173,8 @@ else:
     load_dotenv(".env.dev")
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     
-DEBUG = os.getenv("DEBUG", "False") == "True"
+# DEBUG = os.getenv("DEBUG", "False") == "True"
+        
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -267,7 +265,10 @@ AWS_DEFAULT_ACL = None
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 
 # Dùng S3 làm nơi lưu trữ file mặc định
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+if ENVIRONMENT == "production":
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+else:
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
 # Cookie Settings
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False") == "True"  # Set to True in production

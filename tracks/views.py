@@ -68,7 +68,7 @@ class TrackViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """Get required permissions for the current action."""
-        self.required_permission = self.required_permission
+        self.required_permission
         return [permission() for permission in self.permission_classes]
     
     def update(self, request, *args, **kwargs):
