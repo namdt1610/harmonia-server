@@ -5,4 +5,12 @@ from .models import Profile
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = '__all__'
+        fields = [
+            'user', 'bio',
+            'avatar',
+            'recently_played',
+            'playlists',
+            'favorite_tracks',
+            'favorite_artists',
+            'favorite_albums'
+        ]

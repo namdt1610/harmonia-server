@@ -14,7 +14,7 @@ from .serializers import (
     SubscriptionPlanSerializer, UserSubscriptionSerializer, PaymentHistorySerializer,
     UpgradeSubscriptionSerializer, CancelSubscriptionSerializer, PromoCodeValidationSerializer,
     PromoCodeSerializer, SubscriptionLimitsSerializer, UsageTrackingSerializer,
-    SubscriptionOverviewSerializer
+    SubscriptionOverviewSerializer, UpgradeSubscriptionResponseSerializer
 )
 from .services import (
     SubscriptionService, PromoCodeService, UsageTrackingService, BillingService
@@ -72,19 +72,7 @@ class UpgradeSubscriptionView(APIView):
         operation_description="Upgrade user's subscription to a new plan",
         request_body=UpgradeSubscriptionSerializer(),
         responses={
-            200: openapi.Response(
-                description="Subscription upgraded successfully",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                        'subscription': UserSubscriptionSerializer(),
-                        'payment_required': openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                        'amount': openapi.Schema(type=openapi.TYPE_STRING),
-                        'promo_discount': openapi.Schema(type=openapi.TYPE_STRING),
-                    }
-                )
-            ),
+            200: UpgradeSubscriptionResponseSerializer(),
             400: "Bad Request"
         }
     )
@@ -125,16 +113,7 @@ class CancelSubscriptionView(APIView):
         operation_description="Cancel user's subscription",
         request_body=CancelSubscriptionSerializer(),
         responses={
-            200: openapi.Response(
-                description="Subscription cancelled successfully",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                        'message': openapi.Schema(type=openapi.TYPE_STRING),
-                    }
-                )
-            ),
+            200: UserSubscriptionSerializer(),
             400: "Bad Request"
         }
     )

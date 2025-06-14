@@ -70,18 +70,9 @@ class UserViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         tags=['Users'],
         operation_description="Update a user",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties=ProfileSerializer()
-        ),
+        request_body=ProfileSerializer(),
         responses={
-            200: openapi.Response(
-                description="User updated successfully",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties=ProfileSerializer()
-                )
-            ),
+            200: ProfileSerializer(),
             400: "Bad Request",
             401: "Unauthorized",
             404: "Not Found"
@@ -105,18 +96,9 @@ class UserViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         tags=['Users'],
         operation_description="Partially update a user",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties=ProfileSerializer()
-        ),
+        request_body=ProfileSerializer(),
         responses={
-            200: openapi.Response(
-                description="User partially updated successfully",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties=ProfileSerializer()
-                )
-            ),
+            200: ProfileSerializer(),
             400: "Bad Request",
             401: "Unauthorized",
             404: "Not Found"

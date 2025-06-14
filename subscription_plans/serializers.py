@@ -148,4 +148,13 @@ class RevenueAnalyticsSerializer(serializers.Serializer):
     revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
     subscribers = serializers.IntegerField()
     new_subscribers = serializers.IntegerField()
-    cancelled_subscribers = serializers.IntegerField() 
+    cancelled_subscribers = serializers.IntegerField()
+
+
+class UpgradeSubscriptionResponseSerializer(serializers.Serializer):
+    """Serializer for subscription upgrade response"""
+    success = serializers.BooleanField()
+    subscription = UserSubscriptionSerializer()
+    payment_required = serializers.BooleanField()
+    amount = serializers.CharField()
+    promo_discount = serializers.CharField() 

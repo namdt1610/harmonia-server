@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from django_ratelimit.decorators import ratelimit
-from .serializers import RegisterSerializer, LoginSerializer, AuthUserSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
+from .serializers import RegisterSerializer, AuthUserSerializer, ForgotPasswordSerializer, ResetPasswordSerializer, CustomTokenObtainPairSerializer
 from django.utils.decorators import method_decorator
 from datetime import datetime, timezone, timedelta
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
@@ -72,10 +72,23 @@ class LoginView(TokenObtainPairView):
     """
     swagger_tags = ['Authentication']
     permission_classes = [AllowAny]
-    serializer_class = TokenObtainPairSerializer
+    serializer_class = CustomTokenObtainPairSerializer
 
     def get_rate_limit_key(self, request, *args, **kwargs):
-        return request.data.get('username', '') or request.META.get('REMOTE_ADDR')
+        try:
+            # Try to get username from POST data first
+            username = request.POST.get('username_or_email', '')
+            if not username and request.content_type == 'application/json':
+                # If not in POST and content type is JSON, try to parse body
+                import json
+                try:
+                    body = json.loads(request.body)
+                    username = body.get('username_or_email', '')
+                except:
+                    pass
+            return username or request.META.get('REMOTE_ADDR')
+        except:
+            return request.META.get('REMOTE_ADDR')
 
     @method_decorator(ratelimit(
         key=get_rate_limit_key,
@@ -89,7 +102,7 @@ class LoginView(TokenObtainPairView):
     @swagger_auto_schema(
         tags=['Authentication'],
         operation_description="Login and get access token",
-        request_body=LoginSerializer(),
+        request_body=CustomTokenObtainPairSerializer(),
         responses={
             200: openapi.Response(
                 description="Successful login",
@@ -119,15 +132,6 @@ class LoginView(TokenObtainPairView):
         response = super().post(request, *args, **kwargs)
         
         if response.status_code == 200:
-            # Get user info
-            user = request.user
-            user_data = {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'is_superuser': user.is_superuser
-            }
-            
             # Get tokens from response
             tokens = response.data
             access_token = tokens.get('access')
@@ -139,10 +143,7 @@ class LoginView(TokenObtainPairView):
             opts = get_cookie_options()
             
             # Create new response with user info
-            new_response = Response({
-                'user': user_data,
-                'access': access_token,
-            }, status=status.HTTP_200_OK)
+            new_response = Response(response.data, status=status.HTTP_200_OK)
             
             # Set cookies
             new_response.set_cookie(
@@ -327,6 +328,7 @@ class CustomTokenRefreshView(TokenRefreshView):
     """
     API endpoint for refreshing JWT tokens.
     Provides a new access token using a valid refresh token.
+    Can get refresh token from either request body or cookie.
     """
     swagger_tags = ['Authentication']
     permission_classes = [AllowAny]
@@ -356,4 +358,31 @@ class CustomTokenRefreshView(TokenRefreshView):
         }
     )
     def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+        # If refresh token not in request body, try to get from cookie
+        if 'refresh' not in request.data:
+            refresh_token = request.COOKIES.get('refresh_token')
+            if refresh_token:
+                request.data['refresh'] = refresh_token
+            else:
+                return Response(
+                    {"detail": "No refresh token provided"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        response = super().post(request, *args, **kwargs)
+        
+        # If refresh successful, set new access token in cookie
+        if response.status_code == 200:
+            access_token = response.data.get('access')
+            if access_token:
+                opts = get_cookie_options()
+                response.set_cookie(
+                    key='access_token',
+                    value=access_token,
+                    httponly=True,
+                    expires=datetime.now(timezone.utc) + timedelta(days=1),
+                    path='/',
+                    **opts,
+                )
+        
+        return response

@@ -1,14 +1,17 @@
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 import logging
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
 logger = logging.getLogger(__name__)
+
+User = get_user_model()
 
 class AuthUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,50 +44,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
         return user
 
-class LoginSerializer(serializers.Serializer):
-    username_or_email = serializers.CharField()
-    password = serializers.CharField(write_only=True)
-
-    def validate(self, data):
-        username_or_email = data.get("username_or_email")
-        password = data.get("password")
-        
-        # Check if username_or_email is an email address
-        if '@' in username_or_email:
-            try:
-                user = User.objects.get(email=username_or_email)
-                username = user.username
-            except User.DoesNotExist:
-                raise serializers.ValidationError("Email không tồn tại hoặc mật khẩu không đúng") 
-        else:
-            username = username_or_email
-            
-        user = authenticate(username=username, password=password)
-        
-        if not user:
-            raise serializers.ValidationError("Username hoặc password không đúng")
-        
-        # Generate JWT tokens using Simple JWT
-        refresh = RefreshToken.for_user(user)
-        access_token = str(refresh.access_token)
-        refresh_token = str(refresh)
-        
-        logger.debug(f"Generated JWT tokens for user {user.username}")
-        
-        # Trả kết quả
-        user_data = {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "is_superuser": user.is_superuser,
-        }
-    
-        return {
-            "user": user_data,
-            "access": access_token,
-            "refresh": refresh_token
-        }
-    
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -129,3 +88,43 @@ class ResetPasswordSerializer(serializers.Serializer):
         user.set_password(new_password)
         user.save()
         return user
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    username_field = 'username_or_email'
+
+    def validate(self, attrs):
+        username_or_email = attrs.get('username_or_email')
+        password = attrs.get('password')
+
+        # Try to find user by username or email
+        try:
+            user = User.objects.get(username=username_or_email)
+        except User.DoesNotExist:
+            try:
+                user = User.objects.get(email=username_or_email)
+            except User.DoesNotExist:
+                raise serializers.ValidationError("Email hoặc username không tồn tại")
+
+        # Verify password
+        if not user.check_password(password):
+            raise serializers.ValidationError("Mật khẩu không đúng")
+
+        # Generate tokens
+        refresh = RefreshToken.for_user(user)
+        
+        # Add user data to response
+        user_data = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "is_superuser": user.is_superuser,
+        }
+
+        return {
+            "user": user_data,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh)
+        }
+
+    def get_validation_error(self):
+        return self.get_error_messages()['no_active_account']

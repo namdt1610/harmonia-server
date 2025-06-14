@@ -76,25 +76,33 @@ class TrackSerializer(serializers.ModelSerializer):
     
     def get_file_url(self, obj):
         request = self.context.get('request')
-        if obj.file and hasattr(obj.file, 'url'):
+        if request and obj.file and hasattr(obj.file, 'url'):
             return request.build_absolute_uri(obj.file.url)
         return None
     
     def get_track_thumbnail_url(self, obj):
         request = self.context.get('request')
-        if obj.track_thumbnail and hasattr(obj.track_thumbnail, 'url'):
+        if request and obj.track_thumbnail and hasattr(obj.track_thumbnail, 'url'):
             return request.build_absolute_uri(obj.track_thumbnail.url)
         return None
     
     def get_is_favorite(self, obj):
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            if hasattr(obj, 'id'):
-                try:
-                    return Favorite.objects.filter(
-                        user=request.user, 
-                        track_id=obj.id
-                    ).exists()
-                except Exception as e:
-                    print(f"Error checking favorite status: {e}")
-        return False 
+        if not request:
+            return False
+            
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return False
+            
+        if not hasattr(obj, 'id'):
+            return False
+            
+        try:
+            return Favorite.objects.filter(
+                user=user, 
+                track_id=obj.id
+            ).exists()
+        except Exception as e:
+            print(f"Error checking favorite status: {e}")
+            return False 

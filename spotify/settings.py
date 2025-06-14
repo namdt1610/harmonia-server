@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',  # Add token blacklist app
     'storages',
     'corsheaders',
     'drf_yasg',  # Add Swagger documentation
