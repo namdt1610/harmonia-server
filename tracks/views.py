@@ -60,6 +60,7 @@ class TrackViewSet(viewsets.ModelViewSet):
             'destroy': 'delete_track',
             'list': 'view_track',
             'retrieve': 'view_track',
+            'stream': 'view_track',
         }
         perm = mapping.get(self.action)
         if not perm:
@@ -68,6 +69,8 @@ class TrackViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """Get required permissions for the current action."""
+        if self.action in ['stream', 'retrieve']:
+            return []
         self.required_permission
         return [permission() for permission in self.permission_classes]
     
@@ -118,32 +121,66 @@ class TrackViewSet(viewsets.ModelViewSet):
             500: "Internal server error"
         }
     )
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], permission_classes=[])
     def stream(self, request, pk=None):
-        """Stream a track with range request support."""
         try:
             track = self.get_object()
             file_path = TrackFileService.resolve_track_file_path(track)
             
             if not file_path:
-                return self.response_handler.create_not_found_response('Track file not found')
+                logger.error(f"Track file not found for track {track.id}")
+                raise Http404("Track file not found")
                 
+            range_header = request.META.get('HTTP_RANGE', '').strip()
             content_type = TrackFileService.determine_file_content_type(file_path)
-            range_header = request.META.get('HTTP_RANGE')
             
-            if range_header:
-                range_result, file_size = TrackFileService.process_range_request(file_path, range_header)
-                if range_result:
-                    start, end = range_result
-                    return self.response_handler.create_partial_content_response(
-                        file_path, start, end, file_size, content_type
-                    )
+            # Add CORS headers
+            response_headers = {
+                'Access-Control-Allow-Origin': request.META.get('HTTP_ORIGIN', '*'),
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Range, Content-Type, Authorization',
+                'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges',
+                'Accept-Ranges': 'bytes',
+            }
             
-            return self.response_handler.create_file_download_response(file_path, content_type)
+            if request.method == 'OPTIONS':
+                return HttpResponse(status=204, headers=response_headers)
             
+            if not range_header:
+                # If no range header, return the entire file
+                with open(file_path, 'rb') as f:
+                    response = HttpResponse(f.read(), content_type=content_type)
+                    for key, value in response_headers.items():
+                        response[key] = value
+                    return response
+            
+            # Handle range request
+            range_tuple, file_size = TrackFileService.process_range_request(file_path, range_header)
+            if not range_tuple:
+                # Invalid range header, return the entire file
+                with open(file_path, 'rb') as f:
+                    response = HttpResponse(f.read(), content_type=content_type)
+                    for key, value in response_headers.items():
+                        response[key] = value
+                    return response
+                    
+            start, end = range_tuple
+            response = TrackFileService.create_partial_content_response(
+                file_path, start, end, file_size, content_type
+            )
+            
+            # Add CORS headers to the response
+            for key, value in response_headers.items():
+                response[key] = value
+            
+            return response
+            
+        except Track.DoesNotExist:
+            logger.error(f"Track {pk} not found")
+            raise Http404("Track not found")
         except Exception as e:
-            logger.error(f"Error streaming track: {str(e)}")
-            return self.response_handler.create_error_response(str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Error streaming track {pk}: {str(e)}")
+            raise Http404("Error streaming track")
     
     @swagger_auto_schema(
         tags=['Tracks'],
@@ -161,6 +198,11 @@ class TrackViewSet(viewsets.ModelViewSet):
         
         if not track.is_downloadable:
             return self.response_handler.create_forbidden_response('This track is not available for download')
+        
+        # Check subscription
+        subscription = request.user.subscription
+        if not subscription.can_download_tracks():
+            return self.response_handler.create_forbidden_response('Your subscription does not allow downloading tracks')
         
         self.track_service.record_track_download_event(track)
         

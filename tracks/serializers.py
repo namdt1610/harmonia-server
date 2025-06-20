@@ -24,7 +24,7 @@ class TrackSerializer(serializers.ModelSerializer):
     
     # URL fields
     file_url = serializers.SerializerMethodField()
-    track_thumbnail_url = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
     
     # Computed fields
     is_favorite = serializers.SerializerMethodField()
@@ -42,7 +42,7 @@ class TrackSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'artist', 'artist_name',
             'album', 'album_title', 'genres', 'genres_ids',
-            'duration', 'file', 'file_url', 'track_thumbnail', 'track_thumbnail_url', 
+            'duration', 'file', 'file_url', 'image', 'image_url', 
             'lyrics', 'is_downloadable', 'is_favorite',
             'play_count', 'download_count',
             'created_at', 'updated_at'
@@ -80,10 +80,10 @@ class TrackSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.file.url)
         return None
     
-    def get_track_thumbnail_url(self, obj):
+    def get_image_url(self, obj):
         request = self.context.get('request')
-        if request and obj.track_thumbnail and hasattr(obj.track_thumbnail, 'url'):
-            return request.build_absolute_uri(obj.track_thumbnail.url)
+        if request and obj.image and hasattr(obj.image, 'url'):
+            return request.build_absolute_uri(obj.image.url)
         return None
     
     def get_is_favorite(self, obj):

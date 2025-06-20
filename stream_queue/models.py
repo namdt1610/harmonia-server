@@ -2,6 +2,7 @@ from django.db import models
 from tracks.models import Track
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -17,6 +18,8 @@ class QueueTrack(models.Model):
     track = models.ForeignKey(Track, on_delete=models.CASCADE)
     order = models.PositiveIntegerField(default=0)
     added_at = models.DateTimeField(auto_now_add=True)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['order']

@@ -92,19 +92,30 @@ class TrackFileService:
         
         # 3. Try with simple file name (no directory)
         simple_name = os.path.basename(track.file.name)
-        simple_path = os.path.join(settings.MEDIA_ROOT, 'tracks', simple_name)
+        simple_path = os.path.join(settings.MEDIA_ROOT, 'content', 'audio', 'original', str(track.artist.id), simple_name)
         possible_paths.append(simple_path)
         
         # 4. Simple name decoded
         decoded_simple = urllib.parse.unquote(simple_name)
-        decoded_simple_path = os.path.join(settings.MEDIA_ROOT, 'tracks', decoded_simple)
+        decoded_simple_path = os.path.join(settings.MEDIA_ROOT, 'content', 'audio', 'original', str(track.artist.id), decoded_simple)
         possible_paths.append(decoded_simple_path)
+        
+        # 5. Try with track ID prefix
+        id_prefixed_name = f"{track.id}_{os.path.basename(track.file.name)}"
+        id_prefixed_path = os.path.join(settings.MEDIA_ROOT, 'content', 'audio', 'original', str(track.artist.id), id_prefixed_name)
+        possible_paths.append(id_prefixed_path)
+        
+        # 6. Try with track ID prefix and decoded name
+        id_prefixed_decoded = f"{track.id}_{urllib.parse.unquote(os.path.basename(track.file.name))}"
+        id_prefixed_decoded_path = os.path.join(settings.MEDIA_ROOT, 'content', 'audio', 'original', str(track.artist.id), id_prefixed_decoded)
+        possible_paths.append(id_prefixed_decoded_path)
         
         for path in possible_paths:
             if os.path.exists(path):
                 logger.info(f"Found track file at: {path}")
                 return path
                 
+        logger.error(f"Track file not found. Tried paths: {possible_paths}")
         return None
 
     @staticmethod

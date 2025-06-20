@@ -10,6 +10,7 @@ class Playlist(models.Model):
     is_public = models.BooleanField(default=True)
     followers = models.PositiveIntegerField(default=0)
     description = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='playlists/images/', blank=True, null=True)
 
     class Meta:
         ordering = ["-created_at"]

@@ -1,0 +1,16 @@
+QSocketNotifier: Can only be used with threads started with QThread
+[appimage-binfmt-bypass/bin] DEBUG: AppImage filename: /opt/cursor/Cursor.AppImage
+[appimage-binfmt-bypass/bin] DEBUG: absolute AppImage path: /opt/cursor/Cursor.AppImage
+[appimage-binfmt-bypass/bin] DEBUG: fexecve(...)
+[appimage-binfmt-bypass/lib] DEBUG: readlink /proc/self/exe, len 4096
+[appimage-binfmt-bypass/lib] DEBUG: redirecting readlink to /opt/cursor/Cursor.AppImage
+[appimage-binfmt-bypass/lib] DEBUG: buf: /opt/cursor/Cursor.AppImage, len: 27
+[appimage-binfmt-bypass/lib] DEBUG: realpath /proc/self/exe, (null)
+[appimage-binfmt-bypass/lib] DEBUG: changing realpath destination to /opt/cursor/Cursor.AppImage
+[appimage-binfmt-bypass/lib] DEBUG: open(/opt/cursor/Cursor.AppImage, 0)
+[appimage-binfmt-bypass/lib] DEBUG: open(/tmp/.mount_Cursor9y4tin, 0)
+The setuid sandbox is not running as root. Common causes:
+  * An unprivileged process using ptrace on it, like a debugger.
+  * A parent process set prctl(PR_SET_NO_NEW_PRIVS, ...)
+Failed to move to new namespace: PID namespaces supported, Network namespace supported, but failed: errno = Operation not permitted
+[40243:0620/051605.272066:FATAL:zygote_host_impl_linux.cc(207)] Check failed: . : Invalid argument (22)

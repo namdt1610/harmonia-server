@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Genre
+from django.db.models import Count
 
 class GenreSerializer(serializers.ModelSerializer):
     # Computed fields
@@ -29,4 +30,5 @@ class GenreSerializer(serializers.ModelSerializer):
         return obj.tracks.count()
     
     def get_albums_count(self, obj):
-        return obj.albums.count() 
+        # Count unique albums through tracks
+        return obj.tracks.values('album').distinct().count() 

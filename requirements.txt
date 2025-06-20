@@ -44,5 +44,7 @@ social-auth-app-django==5.4.3
 social-auth-core==4.5.6
 sqlparse==0.5.3
 urllib3==2.3.0
-drf-yasg==1.21.5
-setuptools<81.0.0
+drf-yasg==1.21.7
+setuptools==80.0.0
+channels==4.0.0
+channels-redis==4.1.0

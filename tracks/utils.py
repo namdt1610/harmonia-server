@@ -21,17 +21,41 @@ def stream_file_with_range(request, file_path):
     content_type = mimetypes.guess_type(file_path)[0] or 'audio/mpeg'
     range_header = request.META.get('HTTP_RANGE', '')
 
+    # Add CORS headers
+    response_headers = {
+        'Access-Control-Allow-Origin': request.META.get('HTTP_ORIGIN', '*'),
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Range, Content-Type, Authorization',
+        'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges',
+        'Accept-Ranges': 'bytes',
+    }
+
+    if request.method == 'OPTIONS':
+        return HttpResponse(status=204, headers=response_headers)
+
     if match := re.match(r'bytes=(\d+)-(\d*)', range_header):
         start = int(match.group(1))
         end = int(match.group(2)) if match.group(2) else size - 1
         length = end - start + 1
+
+        # Validate range
+        if start >= size or end >= size or start > end:
+            response = HttpResponse(status=416, headers=response_headers)
+            response['Content-Range'] = f'bytes */{size}'
+            return response
+
         with open(file_path, 'rb') as f:
             f.seek(start)
             data = f.read(length)
         response = HttpResponse(data, status=206, content_type=content_type)
         response['Content-Range'] = f'bytes {start}-{end}/{size}'
         response['Content-Length'] = str(length)
-        response['Accept-Ranges'] = 'bytes'
+        for key, value in response_headers.items():
+            response[key] = value
         return response
 
-    return FileResponse(open(file_path, 'rb'), content_type=content_type)
+    # If no range header or invalid range, return the entire file
+    response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+    for key, value in response_headers.items():
+        response[key] = value
+    return response

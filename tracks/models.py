@@ -25,21 +25,21 @@ def get_audio_upload_path(instance, filename):
 def get_video_upload_path(instance, filename):
     """Get upload path for video files"""
     return os.path.join(
-        settings.MEDIA_STORAGE['CONTENT']['VIDEO']['ORIGINAL'],
+        settings.MEDIA_STORAGE['CONTENT']['VIDEO'],
         f"{instance.artist.id}/{instance.id}_{filename}"
     )
 
-def get_track_thumbnail_path(instance, filename):
-    """Get upload path for track thumbnails"""
+def get_track_image_path(instance, filename):
+    """Get upload path for track images"""
     return os.path.join(
-        settings.MEDIA_STORAGE['CONTENT']['IMAGE']['THUMBNAIL'],
+        settings.MEDIA_STORAGE['CONTENT']['IMAGE'],
         f"{instance.artist.id}/{instance.id}_{filename}"
     )
 
 def get_video_thumbnail_path(instance, filename):
     """Get upload path for video thumbnails"""
     return os.path.join(
-        settings.MEDIA_STORAGE['CONTENT']['VIDEO']['THUMBNAIL'],
+        settings.MEDIA_STORAGE['CONTENT']['IMAGE']['THUMBNAIL'],
         f"{instance.artist.id}/{instance.id}_{filename}"
     )
 
@@ -60,8 +60,8 @@ class Track(models.Model):
         null=True,
         blank=True
     )
-    track_thumbnail = models.ImageField(
-        upload_to=get_track_thumbnail_path,
+    image = models.ImageField(
+        upload_to=get_track_image_path,
         blank=True,
         null=True
     )
@@ -101,14 +101,14 @@ class Track(models.Model):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
-        # Extract cover art if no thumbnail exists
-        if self.file and not self.track_thumbnail:
+        # Extract cover art if no image exists
+        if self.file and not self.image:
             try:
                 audio = MP3(self.file.path, ID3=ID3)
                 for tag in audio.tags.values():
                     if isinstance(tag, APIC):  # APIC = Attached Picture
                         image_data = tag.data
-                        self.track_thumbnail.save(
+                        self.image.save(
                             f"{self.id}_cover.jpg",
                             ContentFile(image_data),
                             save=True

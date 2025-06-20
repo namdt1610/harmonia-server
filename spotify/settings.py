@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'search',
     'permissions',  # Add permissions app
     'subscription_plans',  # Add subscription system
+    'channels',
 ]
 
 SITE_ID = 1  # Cần thiết cho django-allauth
@@ -143,8 +144,32 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3030",
+    "http://localhost:8000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3030",
+    "http://127.0.0.1:8000",
 ]
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'range',
+]
 
 ROOT_URLCONF = 'spotify.urls'
 
@@ -366,6 +391,11 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+        'stream_queue': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
         
     },
 }
@@ -404,3 +434,19 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@harmonia.com')
 
 # Frontend URL for password reset links
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+
+# Channels and WebSocket Configuration
+ASGI_APPLICATION = 'spotify.asgi.application'
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+            "capacity": 1500,  # Maximum number of messages that can be in a channel layer
+            "expiry": 3600,   # Message expiry time in seconds
+        },
+    },
+}
+
+# WebSocket URL Configuration
+WEBSOCKET_URL = '/ws/'

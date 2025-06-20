@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import RegisterView, LoginView, LogoutView, MeView, CustomTokenRefreshView, ForgotPasswordView, ResetPasswordView
+from .views import RegisterView, LoginView, LogoutView, MeView, CustomTokenRefreshView, ForgotPasswordView, ResetPasswordView, google_auth, link_google
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 urlpatterns = [
@@ -11,6 +11,8 @@ urlpatterns = [
     path("token/refresh/", CustomTokenRefreshView.as_view(), name="token_refresh"),
     path("forgot-password/", ForgotPasswordView.as_view(), name="forgot_password"),
     path("reset-password/", ResetPasswordView.as_view(), name="reset_password"),
-    path('google/', include('allauth.socialaccount.urls')), 
+    path('google/', google_auth, name="google_auth"),
+    path('link-google/', link_google, name="link_google"),
+    # path('google/', include('allauth.socialaccount.urls')), 
 ]
 

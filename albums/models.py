@@ -5,7 +5,7 @@ class Album(models.Model):
     title = models.CharField(max_length=255, db_index=True)
     artist = models.ForeignKey(Artist, on_delete=models.CASCADE, related_name="albums")
     release_date = models.DateField(default=None, blank=True, null=True)
-    cover = models.ImageField(upload_to="cover_img/album/", blank=True, null=True)
+    image = models.ImageField(upload_to='albums/images/', blank=True, null=True)
     description = models.TextField(blank=True, null=True)
 
     class Meta:

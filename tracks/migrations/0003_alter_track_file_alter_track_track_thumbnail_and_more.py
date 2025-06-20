@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='track',
             name='track_thumbnail',
-            field=models.ImageField(blank=True, null=True, upload_to=tracks.models.get_track_thumbnail_path),
+            field=models.ImageField(blank=True, null=True, upload_to=tracks.models.get_track_image_path),
         ),
         migrations.AlterField(
             model_name='track',

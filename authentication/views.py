@@ -10,6 +10,7 @@ from datetime import datetime, timezone, timedelta
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
 import logging
 from .models import TokenBlacklist
+from user.models import Profile
 from django.contrib.auth.models import User
 from django.conf import settings
 from rest_framework.decorators import api_view, permission_classes
@@ -17,7 +18,14 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .services import AuthService, EmailService
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from google.oauth2 import id_token
+from google.auth.transport import requests
+from django.conf import settings
+GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
 
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 def get_cookie_options():
@@ -171,7 +179,7 @@ class LogoutView(APIView):
     API endpoint for user logout.
     Invalidates JWT tokens and clears authentication cookies.
     """
-    swagger_tags = ['Authentication']       
+    swagger_tags = ['Authentication']
     permission_classes = [AllowAny]
 
     @swagger_auto_schema(
@@ -192,52 +200,89 @@ class LogoutView(APIView):
     )
     def post(self, request):
         try:
+            logger.info("=== LOGOUT REQUEST STARTED ===")
+            logger.info(f"Request cookies: {dict(request.COOKIES)}")
+
             access_token = request.COOKIES.get('access_token')
             refresh_token = request.COOKIES.get('refresh_token')
-            
-            if access_token:
-                try:
-                    token = AccessToken(access_token)
-                    exp_timestamp = token.payload.get('exp')
-                    expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
-                    
-                    TokenBlacklist.objects.create(
-                        token=access_token,
-                        expires_at=expires_at
-                    )
-                except Exception as e:
-                    logger.error(f"Error blacklisting access token: {str(e)}")
-            
-            if refresh_token:
-                try:
-                    token = RefreshToken(refresh_token)
-                    exp_timestamp = token.payload.get('exp')
-                    expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
-                    
-                    TokenBlacklist.objects.create(
-                        token=refresh_token,
-                        expires_at=expires_at
-                    )
-                except Exception as e:
-                    logger.error(f"Error blacklisting refresh token: {str(e)}")
-            
+
+            # Blacklist tokens if found
+            for token_str, token_class in [
+                (access_token, AccessToken),
+                (refresh_token, RefreshToken)
+            ]:
+                if token_str:
+                    try:
+                        token = token_class(token_str)
+                        exp_timestamp = token.payload.get('exp')
+                        expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
+
+                        TokenBlacklist.objects.create(
+                            token=token_str,
+                            expires_at=expires_at
+                        )
+                        logger.info(f"{token_class.__name__} blacklisted successfully.")
+                    except Exception as e:
+                        logger.warning(f"Error blacklisting token: {e}")
+
+            # Prepare response
             response = Response({"message": "Logout successfully!"}, status=status.HTTP_200_OK)
-            
+
+            # Get cookie options
             opts = get_cookie_options()
-            response.delete_cookie(
-                "access_token",
-                path="/",
-                domain=None,
-                **opts,
-            )
-            response.delete_cookie(
-                "refresh_token",
-                path="/",
-                domain=None,
-                **opts,
-            )
+
+            # Set cookie deletion with all possible combinations
+            cookie_names = ['access_token', 'refresh_token']
+            
+            # First try with delete_cookie
+            for name in cookie_names:
+                response.delete_cookie(name, path='/')
+                response.delete_cookie(name, path='/', domain='localhost')
+                response.delete_cookie(name, path='/', domain='')
+
+            # Then try setting expired cookies with all combinations
+            for cookie_name in cookie_names:
+                # Try with secure true and false
+                for secure in [True, False]:
+                    # Try with different samesite values
+                    for same_site in ['Lax', 'Strict', 'None']:
+                        # Try with different domains
+                        for domain in [None, 'localhost', '']:
+                            # Try with different paths
+                            for path in ['/', '']:
+                                response.set_cookie(
+                                    cookie_name,
+                                    value='',
+                                    expires='Thu, 01 Jan 1970 00:00:00 GMT',
+                                    path=path,
+                                    domain=domain,
+                                    samesite=same_site,
+                                    secure=secure,
+                                    httponly=True
+                                )
+
+            # Add Set-Cookie headers directly
+            for cookie_name in cookie_names:
+                response["Set-Cookie"] = [
+                    f"{cookie_name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0",
+                    f"{cookie_name}=; Path=/; Domain=localhost; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0",
+                    f"{cookie_name}=; Path=/; Domain=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0",
+                    f"{cookie_name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Secure",
+                    f"{cookie_name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; SameSite=None; Secure",
+                    f"{cookie_name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; SameSite=Lax",
+                    f"{cookie_name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; SameSite=Strict"
+                ]
+
+            # Set additional headers to prevent caching
+            response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response["Pragma"] = "no-cache"
+            response["Expires"] = "0"
+
+            logger.info("=== LOGOUT COMPLETED SUCCESSFULLY ===")
             return response
+
         except Exception as e:
+            logger.error(f"Logout error: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class ForgotPasswordView(APIView):
@@ -386,3 +431,76 @@ class CustomTokenRefreshView(TokenRefreshView):
                 )
         
         return response
+
+@csrf_exempt
+def google_auth(request):
+    logger.info("=== google_auth called ===")
+    if request.method == 'POST':
+        import json
+        from user.models import Profile
+        try:
+            data = json.loads(request.body)
+        except Exception as e:
+            logger.error(f"Lỗi parse JSON: {e}")
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        id_token_str = data.get('id_token')
+        try:
+            idinfo = id_token.verify_oauth2_token(id_token_str, requests.Request(), GOOGLE_CLIENT_ID)
+            email = idinfo['email']
+            google_sub = idinfo['sub']
+
+            users = User.objects.filter(email=email)
+            if users.exists():
+                user = users.first()
+                profile, _ = Profile.objects.get_or_create(user=user)
+                if profile.google_sub == google_sub:
+                    # Đã từng liên kết Google, cho đăng nhập
+                    pass
+                else:
+                    return JsonResponse({'error': 'Email đã tồn tại. Hãy liên kết Google trong tài khoản hoặc đăng ký tài khoản mới.'}, status=400)
+            else:
+                # Tạo user mới và profile mới, lưu google_sub
+                user = User.objects.create(
+                    email=email,
+                    username=email.split('@')[0],
+                )
+                profile = Profile.objects.get(user=user)
+                profile.google_sub = google_sub
+                profile.save()
+
+            # Tạo JWT
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            response = JsonResponse({'access_token': access_token})
+            response.set_cookie(
+                key='access_token',
+                value=access_token,
+                httponly=True,
+                samesite='Lax',
+                secure=False,  # Để True nếu dùng HTTPS
+                path='/',
+            )
+            return response
+        except Exception as e:
+            import traceback
+            logger.error(f"Lỗi verify Google token: {traceback.format_exc()}")
+            logger.error(f"Request body: {data}")
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Invalid method'}, status=405)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def link_google(request):
+    id_token_str = request.data.get('id_token')
+    try:
+        idinfo = id_token.verify_oauth2_token(id_token_str, requests.Request(), GOOGLE_CLIENT_ID)
+        google_sub = idinfo['sub']
+        user = request.user
+        profile = user.profile
+        if profile.google_sub:
+            return JsonResponse({'error': 'Tài khoản đã liên kết Google.'}, status=400)
+        profile.google_sub = google_sub
+        profile.save()
+        return JsonResponse({'message': 'Liên kết Google thành công!'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)

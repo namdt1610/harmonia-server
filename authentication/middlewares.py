@@ -75,7 +75,7 @@ class JWTAuthentication(BaseAuthentication):
         except TokenError as e:
             logger.debug(f"Access token error: {str(e)}")
             # Token has expired, try to refresh if refresh token available
-            if refresh_token_str:  # Removed the logout check since we handle it earlier
+            if refresh_token_str:
                 try:
                     # Check if refresh token is blacklisted
                     if TokenBlacklist.objects.filter(token=refresh_token_str).exists():

@@ -17,6 +17,9 @@ class PlaylistSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.username', read_only=True)
     tracks_count = serializers.SerializerMethodField()
     
+    # URL fields
+    image_url = serializers.SerializerMethodField()
+    
     # Timestamp fields
     created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
     updated_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
@@ -26,7 +29,7 @@ class PlaylistSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'description', 'user', 'user_name',
             'tracks', 'tracks_ids', 'tracks_count', 'is_public',
-            'created_at', 'updated_at'
+            'image', 'image_url', 'created_at', 'updated_at'
         ]
         read_only_fields = ['user', 'tracks_count', 'created_at', 'updated_at']
         ref_name = 'PlaylistSerializer'
@@ -38,6 +41,12 @@ class PlaylistSerializer(serializers.ModelSerializer):
     
     def get_tracks_count(self, obj):
         return obj.tracks.count()
+    
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if request and obj.image and hasattr(obj.image, 'url'):
+            return request.build_absolute_uri(obj.image.url)
+        return None
     
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user

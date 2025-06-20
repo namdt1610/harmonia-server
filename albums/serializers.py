@@ -25,7 +25,7 @@ class AlbumSerializer(serializers.ModelSerializer):
     tracks_count = serializers.SerializerMethodField()
     
     # URL fields
-    cover_url = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
     
     # Timestamp fields
     created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
@@ -35,7 +35,7 @@ class AlbumSerializer(serializers.ModelSerializer):
         model = Album
         fields = [
             'id', 'title', 'artist', 'artist_name',
-            'genres', 'genres_ids', 'cover', 'cover_url',
+            'genres', 'genres_ids', 'image', 'image_url',
             'description', 'release_date', 'tracks_count',
             'created_at', 'updated_at'
         ]
@@ -52,10 +52,10 @@ class AlbumSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Release date cannot be in the future")
         return value
     
-    def get_cover_url(self, obj):
+    def get_image_url(self, obj):
         request = self.context.get('request')
-        if obj.cover and hasattr(obj.cover, 'url'):
-            return request.build_absolute_uri(obj.cover.url)
+        if obj.image and hasattr(obj.image, 'url'):
+            return request.build_absolute_uri(obj.image.url)
         return None
     
     def get_tracks_count(self, obj):
