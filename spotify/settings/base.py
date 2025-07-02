@@ -16,6 +16,9 @@ else:
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-+43+y-!@8$x=n0x*dcg^89jou0^_)u7jrb@1$uiuzix1fote2j'
 
+# Enable DEBUG for development
+DEBUG = True
+
 ALLOWED_HOSTS = ["*"]
 
 # Application definition

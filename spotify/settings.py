@@ -198,7 +198,7 @@ else:
     load_dotenv(".env.dev")
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     
-# DEBUG = os.getenv("DEBUG", "False") == "True"
+DEBUG = True  # Enable DEBUG for development
         
 
 # Database

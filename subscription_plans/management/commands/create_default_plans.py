@@ -18,7 +18,8 @@ class Command(BaseCommand):
                 'audio_quality': 'STANDARD',
                 'ads_free': False,
                 'skip_limit': 6,
-                'can_download': False,
+                'can_download': True,  # Temporarily enabled for testing
+                'max_offline_tracks': 100,  # Allow 100 downloads for free users
                 'max_playlists': 20,
                 'family_accounts': 1,
                 'can_upload_music': False,
@@ -29,6 +30,7 @@ class Command(BaseCommand):
                     'Create up to 20 playlists',
                     '6 skips per hour',
                     'Standard audio quality',
+                    'Download up to 100 songs',  # Updated feature
                     'Shuffle play only'
                 ],
                 'description': 'Free access to Harmonia with basic features',

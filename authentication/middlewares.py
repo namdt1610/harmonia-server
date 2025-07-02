@@ -20,6 +20,7 @@ class JWTAuthentication(BaseAuthentication):
             r'^/api/auth/token/refresh/$',
             r'^/api/auth/google/$',
             r'^/admin/',
+            r'^/media/',
         ]
 
     def authenticate(self, request):

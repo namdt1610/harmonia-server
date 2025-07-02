@@ -25,14 +25,14 @@ def get_audio_upload_path(instance, filename):
 def get_video_upload_path(instance, filename):
     """Get upload path for video files"""
     return os.path.join(
-        settings.MEDIA_STORAGE['CONTENT']['VIDEO'],
+        settings.MEDIA_STORAGE['CONTENT']['VIDEO']['ORIGINAL'],
         f"{instance.artist.id}/{instance.id}_{filename}"
     )
 
 def get_track_image_path(instance, filename):
     """Get upload path for track images"""
     return os.path.join(
-        settings.MEDIA_STORAGE['CONTENT']['IMAGE'],
+        settings.MEDIA_STORAGE['CONTENT']['IMAGE']['ORIGINAL'],
         f"{instance.artist.id}/{instance.id}_{filename}"
     )
 

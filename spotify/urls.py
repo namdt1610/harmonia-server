@@ -65,9 +65,10 @@ urlpatterns = [
     path("api/upload-tracks/", include("upload_tracks.urls")),
 
     # Media (Custom stream handler)
-    path("media/<path:path>", TrackViewSet.as_view({'get': 'media_stream'}), name="media_stream"),
+    # path("media/<path:path>", TrackViewSet.as_view({'get': 'media_stream'}), name="media_stream"),
 ]
 
 # === Static files in DEBUG ===
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

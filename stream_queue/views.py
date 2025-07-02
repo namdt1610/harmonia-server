@@ -941,6 +941,204 @@ class QueueViewSet(viewsets.ModelViewSet):
 
     @swagger_auto_schema(
         tags=['Queues'],
+        operation_description="Move to the next track in the queue",
+        responses={
+            200: openapi.Response(
+                description="Moved to next track successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'status': openapi.Schema(type=openapi.TYPE_STRING),
+                        'current_index': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'track': openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                'title': openapi.Schema(type=openapi.TYPE_STRING),
+                                'artist': openapi.Schema(type=openapi.TYPE_STRING)
+                            }
+                        )
+                    }
+                )
+            ),
+            404: "Queue is empty or at the end",
+            401: "Unauthorized"
+        }
+    )
+    @action(detail=False, methods=['post'], url_path='next')
+    def next_track(self, request):
+        def _next_track():
+            try:
+                with transaction.atomic():
+                    queue, _ = Queue.objects.get_or_create(user=request.user)
+                    
+                    # Get all active queue tracks
+                    queue_tracks = list(QueueTrack.objects.filter(
+                        queue=queue,
+                        is_deleted=False
+                    ).select_related(
+                        'track',
+                        'track__artist',
+                        'track__album'
+                    ).order_by('order'))
+                    
+                    if not queue_tracks:
+                        return Response(
+                            {'error': 'Queue is empty'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+                    
+                    # Calculate next index
+                    current_index = queue.current_index
+                    next_index = current_index + 1
+                    
+                    # Check if we've reached the end
+                    if next_index >= len(queue_tracks):
+                        return Response(
+                            {'error': 'Already at the end of queue'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+                    
+                    # Update current index
+                    queue.current_index = next_index
+                    queue.save(update_fields=['current_index'])
+                    
+                    # Get the new current track
+                    current_track = queue_tracks[next_index]
+                    
+                    logger.info(f"Moved to next track at index {next_index} for user {request.user.id}")
+                    
+                    # Send queue update with auto-play signal
+                    self._send_queue_update(request.user, force_sync=True, auto_play=True)
+                    
+                    return Response({
+                        'status': 'moved to next track',
+                        'current_index': next_index,
+                        'track': {
+                            'id': current_track.track.id,
+                            'title': current_track.track.title,
+                            'artist': current_track.track.artist.name if current_track.track.artist else None
+                        },
+                        'auto_play': True
+                    })
+                    
+            except Exception as e:
+                logger.error(f"Error moving to next track: {e}")
+                return Response(
+                    {'error': str(e)},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        try:
+            return self._with_queue_lock(request.user.id, _next_track)
+        except Exception as e:
+            logger.error(f"Failed to acquire queue lock for next_track operation: {e}")
+            return Response(
+                {'error': 'Failed to acquire queue lock'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+    @swagger_auto_schema(
+        tags=['Queues'],
+        operation_description="Move to the previous track in the queue",
+        responses={
+            200: openapi.Response(
+                description="Moved to previous track successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'status': openapi.Schema(type=openapi.TYPE_STRING),
+                        'current_index': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'track': openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                'title': openapi.Schema(type=openapi.TYPE_STRING),
+                                'artist': openapi.Schema(type=openapi.TYPE_STRING)
+                            }
+                        )
+                    }
+                )
+            ),
+            404: "Queue is empty or at the beginning",
+            401: "Unauthorized"
+        }
+    )
+    @action(detail=False, methods=['post'], url_path='previous')
+    def previous_track(self, request):
+        def _previous_track():
+            try:
+                with transaction.atomic():
+                    queue, _ = Queue.objects.get_or_create(user=request.user)
+                    
+                    # Get all active queue tracks
+                    queue_tracks = list(QueueTrack.objects.filter(
+                        queue=queue,
+                        is_deleted=False
+                    ).select_related(
+                        'track',
+                        'track__artist',
+                        'track__album'
+                    ).order_by('order'))
+                    
+                    if not queue_tracks:
+                        return Response(
+                            {'error': 'Queue is empty'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+                    
+                    # Calculate previous index
+                    current_index = queue.current_index
+                    previous_index = current_index - 1
+                    
+                    # Check if we're already at the beginning
+                    if previous_index < 0:
+                        return Response(
+                            {'error': 'Already at the beginning of queue'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+                    
+                    # Update current index
+                    queue.current_index = previous_index
+                    queue.save(update_fields=['current_index'])
+                    
+                    # Get the new current track
+                    current_track = queue_tracks[previous_index]
+                    
+                    logger.info(f"Moved to previous track at index {previous_index} for user {request.user.id}")
+                    
+                    # Send queue update with auto-play signal
+                    self._send_queue_update(request.user, force_sync=True, auto_play=True)
+                    
+                    return Response({
+                        'status': 'moved to previous track',
+                        'current_index': previous_index,
+                        'track': {
+                            'id': current_track.track.id,
+                            'title': current_track.track.title,
+                            'artist': current_track.track.artist.name if current_track.track.artist else None
+                        },
+                        'auto_play': True
+                    })
+                    
+            except Exception as e:
+                logger.error(f"Error moving to previous track: {e}")
+                return Response(
+                    {'error': str(e)},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        try:
+            return self._with_queue_lock(request.user.id, _previous_track)
+        except Exception as e:
+            logger.error(f"Failed to acquire queue lock for previous_track operation: {e}")
+            return Response(
+                {'error': 'Failed to acquire queue lock'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+    @swagger_auto_schema(
+        tags=['Queues'],
         operation_description="Partially update a queue",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,

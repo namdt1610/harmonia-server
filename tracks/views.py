@@ -199,10 +199,14 @@ class TrackViewSet(viewsets.ModelViewSet):
         if not track.is_downloadable:
             return self.response_handler.create_forbidden_response('This track is not available for download')
         
-        # Check subscription
-        subscription = request.user.subscription
-        if not subscription.can_download_tracks():
-            return self.response_handler.create_forbidden_response('Your subscription does not allow downloading tracks')
+        # Check subscription - handle case where user has no subscription
+        try:
+            subscription = request.user.subscription
+            if not subscription.can_download_tracks():
+                return self.response_handler.create_forbidden_response('Your subscription does not allow downloading tracks')
+        except AttributeError:
+            # User has no subscription - create a default free subscription or deny
+            return self.response_handler.create_forbidden_response('No subscription found. Please subscribe to download tracks.')
         
         self.track_service.record_track_download_event(track)
         
@@ -248,7 +252,7 @@ class TrackViewSet(viewsets.ModelViewSet):
             500: "Internal server error"
         }
     )
-    @action(detail=False, methods=['get'], url_path='media/(?P<path>.*)')
+    @action(detail=False, methods=['get'], url_path='media/(?P<path>.*)', permission_classes=[])
     def media_stream(self, request, path=None):
         """Stream media files with range request support."""
         try:
